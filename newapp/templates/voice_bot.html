@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Voice Bot Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #e0f7fa, #fce4ec);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+    }
+    .card h2 {
+      margin-bottom: 1rem;
+      color: #2c3e50;
+      font-weight: 600;
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1rem auto;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 1rem;
+      border: none;
+      border-radius: 10px;
+      background-color: #f1f3f4;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 1.5rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .message {
+      margin-top: 1rem;
+      font-size: 14px;
+    }
+    .success {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="#007bff" viewBox="0 0 24 24">
+        <path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-2 11a2 2 0 0 0 4 0V5a2 2 0 0 0-4 0v7zm11-1h-2.07A7.004 7.004 0 0 1 12 18a7.004 7.004 0 0 1-6.93-7H3a9 9 0 0 0 8 8.94V22H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.06A9 9 0 0 0 21 11z"/>
+      </svg>
+    </div>
+    <h2>Start Voice Bot Call</h2>
+    <form method="POST" action="{% url 'send_voice_bot' %}">
+      {% csrf_token %}
+      <input type="tel" name="phone" placeholder="Enter phone number e.g. +60123456789" required />
+      <textarea name="message" placeholder="Enter assistant instruction..." required rows="4"></textarea>
+      <button type="submit">Start Call</button>
+    </form>
+
+    {% if success_message %}
+      <p class="message success">{{ success_message }}</p>
+    {% endif %}
+    {% if error_message %}
+      <p class="message error">{{ error_message }}</p>
+    {% endif %}
+  </div>
+
+</body>
+</html>

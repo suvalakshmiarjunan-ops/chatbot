@@ -1,0 +1,214 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Contacts</title>
+
+  <style>
+    :root { --sidebar-w: 250px; }
+
+    body {
+      margin: 0;
+      background: #f7f8fb;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .main {
+      margin-left: var(--sidebar-w);
+      padding: 24px 32px; /* extra padding to push right */
+    }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 16px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .search {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .search input {
+      width: 100%;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      background: transparent;
+    }
+
+    .btn {
+      background: #fff;
+      border: 1px solid #3B82F6; /* blue border */
+      color: #3B82F6; /* blue text */
+      border-radius: 6px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: rgba(59, 130, 246, 0.1); /* light blue on hover */
+    }
+
+    .table-head {
+      display: grid;
+      grid-template-columns: 48px 2fr 2fr 1.5fr 1.5fr;
+      padding: 10px 14px;
+      color: #6b7280;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .card {
+      display: grid;
+      grid-template-columns: 48px 2fr 2fr 1.5fr 1.5fr;
+      align-items: center;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      transition: background 0.2s ease;
+    }
+
+    .card:hover {
+      background: #f9fafb;
+    }
+
+    .chk {
+      display: flex;
+      justify-content: center;
+    }
+
+    .name-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex: 0 0 32px;
+      background: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    .muted {
+      color: #6b7280;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    @media (max-width: 640px) {
+      .table-head { display: none; }
+      .card {
+        grid-template-columns: 40px 1fr;
+        row-gap: 8px;
+      }
+      .card .phone,
+      .card .source,
+      .card .entered {
+        grid-column: 2 / -1;
+        color: #374151;
+        font-weight: 500;
+      }
+      .main { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  {% include 'layouts/sidebar.html' %}
+
+  <main class="main">
+    <h1 class="page-title">My Contacts</h1>
+
+    <div class="toolbar">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M21 21l-3.8-3.8M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"
+            stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        <input id="searchInput" type="text" placeholder="Search anything here..." />
+      </div>
+      <button class="btn">Filter</button>
+      <button class="btn">More</button>
+    </div>
+
+    <div class="table-head">
+      <div class="chk"><input type="checkbox" /></div>
+      <div>Name</div>
+      <div>Phone number</div>
+      <div>Source</div>
+      <div>Last Seen</div>
+    </div>
+
+    <div id="rows">
+      {% for u in users %}
+        <div class="card" data-search="{{ u.name }} {{ u.phone_no }} whatsapp {{ u.created_at }}">
+          <div class="chk"><input type="checkbox" /></div>
+
+          <div class="name-cell">
+            <div class="avatar">
+              {% if u.avatar_url %}
+                <img src="{{ u.avatar_url }}" alt="{{ u.name }}" style="width:100%;height:100%;object-fit:cover;">
+              {% else %}
+                {{ u.name|slice:":1"|upper }}
+              {% endif %}
+            </div>
+            <div>{{ u.name }}</div>
+          </div>
+
+          <div class="phone muted">{{ u.phone_no }}</div>
+          <div class="source muted">Whatsapp</div>
+          <div class="entered muted">{{ u.created_at }}</div>
+        </div>
+      {% empty %}
+        <p>No contacts yet.</p>
+      {% endfor %}
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      const q = document.getElementById('searchInput');
+      const rows = document.getElementById('rows').children;
+      q && q.addEventListener('input', function() {
+        const term = this.value.toLowerCase();
+        for (const r of rows) {
+          const hay = (r.dataset.search || '').toLowerCase();
+          r.style.display = hay.includes(term) ? '' : 'none';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

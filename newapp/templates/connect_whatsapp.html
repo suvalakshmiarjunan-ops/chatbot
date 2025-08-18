@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Connect to WhatsApp</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #25D366, #128C7E);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: #ffffff;
+      padding: 40px 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .container h2 {
+      margin-bottom: 24px;
+      color: #128C7E;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      display: block;
+      margin: 15px 0 5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      transition: 0.2s border ease-in-out;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #25D366;
+    }
+
+    button {
+      margin-top: 24px;
+      width: 100%;
+      padding: 12px;
+      background-color: #25D366;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #1DA851;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Connect to WhatsApp</h2>
+    <form method="POST">
+      {% csrf_token %}
+      <label for="token">Access Token</label>
+      <input type="text" name="token" id="token" required />
+
+      <label for="phone_id">Phone Number ID</label>
+      <input type="text" name="phone_id" id="phone_id" required />
+
+      <button type="submit">Connect Now</button>
+    </form>
+  </div>
+</body>
+</html>

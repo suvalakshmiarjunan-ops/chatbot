@@ -1,0 +1,113 @@
+{% load static custom_tags %}
+
+<style>
+  .sidebar {
+  width: 220px;
+  background: #fff;
+  border-right: 1px solid #e5e5e5;
+  padding: 15px 10px;
+  font-family: Arial, sans-serif;
+  transition: transform 0.3s ease;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  z-index: 1000;
+}
+
+.main {
+  margin-left: 240px;
+  padding: 20px;
+  min-height: 100vh;
+  display: block;
+}
+
+
+  .sidebar.hidden {
+    transform: translateX(-70%);
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Logo left, toggle button right */
+    margin-bottom: 20px;
+  }
+
+  .toggle-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: #000;
+  }
+
+  .sidebar a {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #000;
+    font-size: 15px;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  .sidebar a i {
+    margin-right: 8px;
+  }
+
+  .sidebar a.active {
+    background: #0d6efd;
+    color: #fff;
+  }
+
+  .sidebar a:hover {
+    background: #f0f0f0;
+  }
+</style>
+
+<div class="sidebar" id="sidebar">
+  <!-- Sidebar Header -->
+  <div class="sidebar-header">
+    <div class="brand">
+      <img src="{% static 'images/Speedbot.png' %}" alt="Logo" style="height:35px; margin-right:8px;">
+      <strong>Speedbots</strong>
+    </div>
+    <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+  </div>
+
+  {% url 'dashboard' as dashboard_url %}
+  <a href="{{ dashboard_url }}" class="{% if request.path|startswith:'dashboard' %}active{% endif %}">
+    <i class="fas fa-th-large"></i> Dashboard
+  </a>
+
+  {% url 'inbox_dashboard' as inbox_url %}
+  <a href="{{ inbox_url }}" class="{% if request.path|startswith:'inbox' %}active{% endif %}">
+    <i class="fas fa-comment-alt"></i> Inbox
+  </a>
+
+  {% url 'flows' as flows_url %}
+  <a href="{{ flows_url }}" class="{% if request.path|startswith:'flows' %}active{% endif %}">
+    <i class="fas fa-project-diagram"></i> Flows
+  </a>
+
+ {% url 'contact_dashboard' as contact_url %}
+<a href="{{ contact_url }}"
+   class="{% if request.path == contact_url %}active{% endif %}">
+  <i class="fas fa-user"></i> My Contacts
+</a>
+
+
+  {% url 'settings' as settings_url %}
+  <a href="{{ settings_url }}" class="{% if request.path|startswith:'settings' %}active{% endif %}">
+    <i class="fas fa-cog"></i> Settings
+  </a>
+</div>
+
+<script>
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("hidden");
+}
+</script>

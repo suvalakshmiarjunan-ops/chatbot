@@ -1,0 +1,178 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f9fafb;
+        }
+        .main {
+            padding: 20px;
+            margin-left: 250px; /* if you have sidebar */
+        }
+        /* Channel cards */
+        .channel-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .channel-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            width: 140px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .channel-card i {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        .channel-card button {
+            background: #22c55e; /* green */
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        /* Stats cards */
+        .stats-row {
+            display: flex;
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            flex: 1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .stats-number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stats-label {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        /* Chart container */
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .chart-header h3 {
+            margin: 0;
+        }
+        select {
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+        }
+    </style>
+</head>
+<body>
+{% include 'layouts/sidebar.html' %}
+
+<div class="main">
+    <!-- Channels -->
+    <div class="channel-row">
+        <div class="channel-card">
+            <i class="fab fa-whatsapp" style="color: #25D366;"></i>
+            <div>WhatsApp</div>
+            <button><a href="{{phone_id}}">Test Now</a></button>
+        </div>
+        <div class="channel-card">
+            <i class="fab fa-instagram" style="color: #E4405F;"></i>
+            <div>Instagram</div>
+            <button>Test now</button>
+        </div>
+        <div class="channel-card">
+            <i class="fab fa-facebook-messenger" style="color: #0084FF;"></i>
+            <div>Messenger</div>
+            <button>Test now</button>
+        </div>
+        <div class="channel-card">
+            <i class="fas fa-comments" style="color: #2563eb;"></i>
+            <div>Webchat</div>
+            <button>Test now</button>
+        </div>
+        <div class="channel-card">
+            <div style="font-size: 24px;">+</div>
+            <div>Channels</div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stats-card">
+            <div class="stats-number">{{ count }}</div>
+            <div class="stats-label">Contacts</div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-number">{{ active_contacts_count }}</div>
+            <div class="stats-label">Active Contacts</div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3>New Contacts</h3>
+            <select>
+                <option>Last 12 Months</option>
+                <option>Last 6 Months</option>
+                <option>Last 30 Days</option>
+            </select>
+        </div>
+        <canvas id="contactsChart" height="100"></canvas>
+    </div>
+</div>
+
+<script>
+    const ctx = document.getElementById('contactsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Mar 2023', 'Jun 2023', 'Sep 2023', 'Dec 2023', 'Mar 2024', 'Jun 2024', 'Sep 2024', 'Dec 2024'],
+            datasets: [{
+                label: 'New Contacts',
+                data: [18, 10, 15, 6, 17, 2, 16, 9],
+                backgroundColor: '#60a5fa'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    position: 'right',
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value + 'K';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
