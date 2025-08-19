@@ -88,10 +88,10 @@
     <i class="fas fa-comment-alt"></i> Inbox
   </a>
 
-  {% url 'flows' as flows_url %}
+  <!-- {% url 'flows' as flows_url %}
   <a href="{{ flows_url }}" class="{% if request.path|startswith:'flows' %}active{% endif %}">
     <i class="fas fa-project-diagram"></i> Flows
-  </a>
+  </a> -->
 
  {% url 'contact_dashboard' as contact_url %}
 <a href="{{ contact_url }}"
