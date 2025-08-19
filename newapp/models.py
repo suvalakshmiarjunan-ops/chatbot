@@ -1,7 +1,21 @@
 from django.db import models
 
+class Admin(models.Model):
+    id=models.AutoField(primary_key=True)
+    email=models.TextField()
+    password=models.TextField()
+    whatsapp_phone_id=models.TextField()
+    whatsapp_token=models.TextField()
+    created_at=models.DateTimeField(auto_now_add=True)
+    display_phone_no=models.TextField()
+    
+    class Meta:
+        managed=False
+        db_table='admins'
+
 class User(models.Model):
     id = models.AutoField(primary_key=True)
+    admin_id=models.ForeignKey(Admin,on_delete=models.DO_NOTHING,db_column='admin_id')
     name = models.CharField(max_length=100)
     phone_no= models.CharField(max_length=20)
     created_at = models.DateTimeField()
@@ -25,16 +39,5 @@ class Message(models.Model):
         managed = False
         db_table = 'conversations'  # Ensure this matches your MySQL table
 
-class Admin(models.Model):
-    id=models.AutoField(primary_key=True)
-    email=models.TextField()
-    password=models.TextField()
-    whatsapp_phone_id=models.TextField()
-    whatsapp_token=models.TextField()
-    created_at=models.DateTimeField(auto_now_add=True)
-    display_phone_no=models.TextField()
-    
-    class Meta:
-        managed=False
-        db_table='admins'
+
 # Create your models here.

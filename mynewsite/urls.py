@@ -24,6 +24,9 @@ urlpatterns = [
     
     # contact
     path('contact/dashboard',Contactcontroller.dashboard,name='contact_dashboard'),
+    path('contact/add',Contactcontroller.add_user,name='add_user'),
+    path('contact/add_admin_user',Contactcontroller.add_admin_user,name='add_admin_user'),
+    # setting
     path('settings/',Settingcontroller.dashboard , name='settings'),
     # setting
     path('setting/channels', Settingcontroller.channels_view, name='channels_view'),
