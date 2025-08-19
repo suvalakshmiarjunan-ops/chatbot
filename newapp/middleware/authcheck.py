@@ -10,7 +10,7 @@ class AdminAuthMiddleware:
         path = request.path or "/"
 
         # Don’t block login, logout, or static/media
-        allowlist = ("/login", "/logout", "/static/", "/media/")
+        allowlist = ("/login", "/logout", "/static/", "/media/",'/get_message','/send_whatsapp_message')
 
         # Check if path is protected
         if not path.startswith(allowlist):

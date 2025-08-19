@@ -6,6 +6,7 @@ class Admin(models.Model):
     password=models.TextField()
     whatsapp_phone_id=models.TextField()
     whatsapp_token=models.TextField()
+    pinecone_token=models.TextField()
     created_at=models.DateTimeField(auto_now_add=True)
     display_phone_no=models.TextField()
     

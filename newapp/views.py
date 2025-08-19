@@ -250,17 +250,6 @@ def get_message(request):
                 who='human'
             )
 
-            # # replace with dynamic number
-
-            # payload = {
-            #     "phone": phone_number,
-            #     "message": bot_response
-            #     }
-            # # response msg send
-            # print(msg_text)
-            # print(phone)
-            # return HttpResponse("Message stored", status=200)
-
             pc = Pinecone(
                 api_key='pcsk_2ayS93_Mo3c98NYEpDXKoSWadNcjjtwAmCPwDJ8Yj3jWHpMhtpvxA5aqSMawtxPYYmRgq1')
 

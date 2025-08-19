@@ -4,13 +4,14 @@ from django.contrib.auth import authenticate,login
 from django.shortcuts import render,redirect
 from ..models import Admin
 from ..models import User
+from django.views.decorators.csrf import csrf_exempt
 
 
 class Logincontroller:
     def login_view(request):
         request.session.flush()
         return render(request,'login_form.html')
-    
+    @csrf_exempt
     def login_post(request):
         if request.method != 'POST':
             return HttpResponse('INVALID REQUEST', status=405)

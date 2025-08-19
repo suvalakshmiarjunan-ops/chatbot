@@ -12,7 +12,7 @@ from newapp.controllers.whatsapp import whatsappcontroller
 
 urlpatterns = [
     # logout
-    path('/',Logincontroller.enter,name='/'),
+    path('',Logincontroller.enter,name=''),
     path('logout/',Logincontroller.logout,name='logout'),
     
     path('login_view/',Logincontroller.login_view),
@@ -33,14 +33,18 @@ urlpatterns = [
     # channels
     path('whatsapp_connect',whatsappcontroller.connect,name='whatsapp_connect'),
     
+    
+    # whatsapp
+    path('get_message/', whatsappcontroller.get_message, name='get_message'),
+     path('send_whatsapp_message/', whatsappcontroller.send_whatsapp_message,name='send_whatsapp_message'),
+    
     path('flows/', views.flows_view, name='flows'),
     path('admin/', admin.site.urls),
-    path('send_whatsapp_message/', views.send_whatsapp_message,
-         name='send_whatsapp_message'),
+   
     path('connect_whatsapp/', views.connect_whatsapp, name='connect_whatsapp'),
     path('voice_bot/', views.voice_bot, name='voice_bot'),
     path('send_voice_bot/', views.send_voice_bot, name='send_voice_bot'),
-    path('get_message/', views.get_message, name='get_message'),
+    
     path('show_people/',views.show_people,name='show_people'),
     path('chatbox/', views.show_chatbox, name='chatbox'),
     path('broadcast_msg/',views.broadcast_msg,name='broadcast_msg'),

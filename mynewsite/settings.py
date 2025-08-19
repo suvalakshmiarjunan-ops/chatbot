@@ -31,6 +31,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '1d947b3a8e32.ngrok-free.app',  # ← Add this
     '.ngrok-free.app',
+    "https://07377353818c.ngrok-free.app"
 ]
 
 
