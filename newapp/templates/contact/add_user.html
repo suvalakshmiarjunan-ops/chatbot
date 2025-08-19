@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add User</title>
+  <style>
+    :root { --sidebar-w: 250px; --primary: #4CAF50; }
+
+    body {
+      margin: 0;
+      /* background: #f7f8fb; */
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .main {
+      margin-left: var(--sidebar-w);
+      padding: 24px 32px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      font-size: 22px;
+      color: #333;
+    }
+
+    form {
+      max-width: 400px;
+      background: #fff;
+      padding: 50px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin: 12px 0 6px;
+      color: #444;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.15);
+    }
+
+    button {
+      margin-top: 18px;
+      padding: 10px 16px;
+      background-color: var(--primary);
+      border: none;
+      color: #fff;
+      font-size: 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+
+  {% include 'layouts/sidebar.html' %}
+  <div class="main">
+        
+  {% include 'components/flash.html' %} 
+    <h2>Add User</h2>
+
+    <form method="post" action="{% url 'add_admin_user' %}">
+        {% csrf_token %}
+
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required>
+
+        <label for="phone_no">Phone Number:</label>
+        <input type="text" id="phone_no" name="phone_no" required placeholder="919994780436">
+
+        <button type="submit">Submit</button>
+    </form>
+  </div>
+</body>
+</html>
