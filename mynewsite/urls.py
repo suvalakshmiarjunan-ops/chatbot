@@ -11,6 +11,10 @@ from newapp.controllers.whatsapp import whatsappcontroller
 
 
 urlpatterns = [
+    # logout
+    path('/',Logincontroller.enter,name='/'),
+    path('logout/',Logincontroller.logout,name='logout'),
+    
     path('login_view/',Logincontroller.login_view),
     path('login_post/',Logincontroller.login_post,name='login_post'),
     

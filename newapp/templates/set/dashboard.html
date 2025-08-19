@@ -68,9 +68,16 @@
       </a>
 
       
-      <a class="settings-item">
+      <a class="settings-item"> 
         <span>Account Settings</span><span class="chev">›</span>
       </a>
+      <a class="settings-item" href="{% url 'logout' %}" onclick="return confirm('need to logout?')">
+        <span>logout</span><span class="chev">›</span>
+      </a>
+
+      <!-- <a href="" class="setting-item">
+        <span>logout</span><span class="chew">></span>
+      </a> -->
     </div>
   </main>
 
