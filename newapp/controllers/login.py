@@ -8,6 +8,7 @@ from ..models import User
 
 class Logincontroller:
     def login_view(request):
+        request.session.flush()
         return render(request,'login_form.html')
     
     def login_post(request):
@@ -24,7 +25,7 @@ class Logincontroller:
 
         request.session['admin_id'] = admin.id
         request.session['admin_email'] = admin.email
-        messages.success(request, f"Welcome {admin.email}")
+        # messages.success(request, f"Welcome {admin.email}")
         return redirect('/dashboard')
        
         
@@ -33,3 +34,10 @@ class Logincontroller:
 #     print('hi')
 #     return HttpResponse('hi')
 #     return render(request, 'login_form.html')
+    def logout(request):
+        request.session.flush()
+        messages.warning(request,"you have been logged out")
+        return redirect('/login_view')
+    
+    def enter(request):
+        return redirect('/login_view')
