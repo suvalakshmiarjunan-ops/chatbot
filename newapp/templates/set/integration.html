@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Integrations - ChatGPT</title>
+
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+  <style>
+    /* General Styles */
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: #0f172a;
+      background: #f7f8fb;
+      margin: 0;
+      height: 100%;
+    }
+
+    .main {
+      padding: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+      min-height: 100vh;
+    }
+
+    h2 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ChatGPT Button Styling */
+    .channel-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 12px;
+      padding: 18px;
+      margin: 12px 0;
+      text-decoration: none;
+      color: #0f172a;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(16, 24, 40, 0.05);
+      transition: box-shadow 0.12s ease, transform 0.12s ease, border-color 0.12s ease;
+      height: 84px;
+      cursor: pointer; /* Makes it look clickable */
+    }
+
+    .channel-item:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08);
+      background: #f0f0f0; /* Lighter background on hover */
+    }
+
+    .ci-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .ci-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      flex: 0 0 36px;
+    }
+
+    .ci-label {
+      font-weight: 700;
+      font-size: 16px;
+      color: #0d6efd; /* Blue color to make it stand out */
+    }
+
+    .wa {
+      background: #25D366;
+    }
+
+    .ci-right {
+      margin-left: auto;
+      color: #9ca3af;
+      font-size: 18px;
+    }
+
+    /* Modal Styles */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .modal {
+      width: 520px;
+      max-width: calc(100% - 32px);
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 20px 50px rgba(2, 6, 23, 0.25);
+      padding: 22px;
+      transform: translateY(6px);
+      opacity: 0.98;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+      display: none;
+    }
+
+    .modal.show {
+      transform: translateY(0);
+      opacity: 1;
+      display: block;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .modal-title {
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #6b7280;
+    }
+
+    .field {
+      margin-top: 14px;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .input {
+      width: 100%;
+      height: 40px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 0 10px;
+      font-size: 14px;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .actions {
+      margin-top: 18px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      color: #fff;
+      background: #0b5bd3;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h2>Integrations</h2>
+
+    <div class="list">
+      <!-- ChatGPT integration item -->
+      <a href="javascript:void(0);" class="channel-item" id="openChatGPTModal">
+        <div class="ci-left">
+          <span class="ci-icon wa"><i class="fa-brands fa-openai"></i></span>
+          <span class="ci-label">ChatGPT</span>
+          {% if request.session.openai_api_key %}
+            <i id="chatgptStatusIcon" class="fa-solid fa-circle-check text-success ms-1" title="Connected" aria-label="Connected"></i>
+          {% else %}
+            <i id="chatgptStatusIcon" class="fa-solid fa-circle-xmark text-danger ms-1" title="Not Connected" aria-label="Not Connected"></i>
+          {% endif %}
+        </div>
+        <span class="ci-right">›</span>
+      </a>
+    </div>
+
+    <!-- ChatGPT API Key Modal -->
+    <div id="chatgptBackdrop" class="modal-backdrop" style="display:none;">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="chatgptTitle">
+        <div class="modal-header">
+          <div class="modal-title" id="chatgptTitle">ChatGPT Integration</div>
+          <button type="button" class="close" id="chatgptClose" aria-label="Close">✕</button>
+        </div>
+
+        <form id="chatgptForm" method="POST" action="{% url 'chatgpt_integration' %}">
+          {% csrf_token %}
+          <div class="field">
+            <label class="label" for="apiKey">Enter your OpenAI API Key:</label>
+            <input class="input" id="apiKey" name="api_key" placeholder="sk-XXXX..." required />
+          </div>
+          <div class="actions">
+            <button class="btn-primary" type="submit" id="chatgptSubmit">Integrate</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const openBtn = document.getElementById('openChatGPTModal');
+  const backdrop = document.getElementById('chatgptBackdrop');
+  const closeBtn = document.getElementById('chatgptClose');
+  const modal = backdrop.querySelector('.modal');
+  const form = document.getElementById('chatgptForm');
+
+  function openModal() {
+    backdrop.style.display = 'flex';
+    backdrop.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    modal.classList.add('show');
+  }
+
+  function closeModal() {
+    backdrop.style.display = 'none';
+    backdrop.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = 'auto';
+    modal.classList.remove('show');
+  }
+
+  if (openBtn && backdrop && closeBtn && modal && form) {
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // AJAX form submission for API key
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const apiKey = formData.get('api_key').trim();
+
+      if (!apiKey) {
+        alert('Please enter your OpenAI API Key.');
+        return;
+      }
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'success') {
+          alert('ChatGPT integrated successfully!');
+          closeModal();
+
+          // Update the status icon to green connected
+          const icon = document.getElementById('chatgptStatusIcon');
+          if (icon) {
+            icon.classList.remove('fa-circle-xmark', 'text-danger');
+            icon.classList.add('fa-circle-check', 'text-success');
+            icon.title = 'Connected';
+            icon.setAttribute('aria-label', 'Connected');
+          }
+        } else {
+          alert('Error: ' + (data.error || 'Failed to integrate API key.'));
+        }
+      } catch (error) {
+        alert('Network error. Please try again.');
+        console.error(error);
+      }
+    });
+
+  } else {
+    console.error('Modal elements or form not found: check your IDs');
+  }
+});
+</script>
+
+</body>
+</html>

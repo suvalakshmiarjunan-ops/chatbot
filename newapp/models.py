@@ -7,8 +7,10 @@ class Admin(models.Model):
     whatsapp_phone_id=models.TextField()
     whatsapp_token=models.TextField()
     pinecone_token=models.TextField()
+    openai_api_key = models.TextField()  # New field to store API key
     created_at=models.DateTimeField(auto_now_add=True)
     display_phone_no=models.TextField()
+    
     
     class Meta:
         managed=False

@@ -9,6 +9,8 @@ from newapp.controllers.contact import Contactcontroller
 from newapp.controllers.settings import Settingcontroller
 from newapp.controllers.whatsapp import whatsappcontroller
 
+from newapp import views
+
 
 urlpatterns = [
     # logout
@@ -30,8 +32,16 @@ urlpatterns = [
     path('settings/',Settingcontroller.dashboard , name='settings'),
     # setting
     path('setting/channels', Settingcontroller.channels_view, name='channels_view'),
+
+    path('settings/integrations/', views.integration_view, name='integration_view'),
+    path('settings/integrations/chatgpt/', views.chatgpt_integration, name='chatgpt_integration'),
+    path('chatgpt_integration/', views.chatgpt_integration, name='chatgpt_integration'),
+    
+    path('chatgpt/respond/', views.chatgpt_respond, name='chatgpt_respond'),
     # channels
     path('whatsapp_connect',whatsappcontroller.connect,name='whatsapp_connect'),
+
+    
     
     
     # whatsapp

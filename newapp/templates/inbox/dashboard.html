@@ -122,6 +122,14 @@
         <div class="empty">No messages for this user.</div>
       {% endif %}
     </div>
+    <div class="p-3 border-top" style="background:#fff;">
+      <form id="chatForm" onsubmit="return sendMessage(event);">
+        <div class="input-group">
+          <input id="userMessage" type="text" class="form-control" placeholder="Type your message..." autocomplete="off" required />
+          <button type="submit" class="btn btn-primary">Send</button>
+        </div>
+      </form>
+    </div>
 
     <!-- VIEW-ONLY: no input/footer -->
   </section>
@@ -132,5 +140,76 @@
   // Auto-scroll to latest message
   (function(){var el=document.getElementById('threadBody'); if(el) el.scrollTop=el.scrollHeight;})();
 </script>
+<script>
+  async function sendMessage(event) {
+    event.preventDefault();
+    const input = document.getElementById('userMessage');
+    const message = input.value.trim();
+    if (!message) return false;
+
+    // Display user message immediately
+    appendMessage(message, 'user');
+
+    // Clear and disable input while waiting for reply
+    input.value = '';
+    input.disabled = true;
+
+    try {
+      const formData = new FormData();
+      formData.append('message', message);
+
+      const response = await fetch('/chatgpt/respond/', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: formData
+      });
+      const data = await response.json();
+
+      if (response.ok && data.reply) {
+        appendMessage(data.reply, 'bot');
+      } else {
+        appendMessage("Error: " + (data.error || "No response"), 'bot');
+      }
+    } catch (error) {
+      appendMessage("Network error. Please try again.", 'bot');
+    } finally {
+      input.disabled = false;
+      input.focus();
+    }
+    return false;
+  }
+
+  function appendMessage(msg, sender) {
+    const threadBody = document.getElementById('threadBody');
+
+    const row = document.createElement('div');
+    row.classList.add('rowmsg', sender);
+
+    const bubble = document.createElement('div');
+    bubble.classList.add('bubble');
+    bubble.textContent = msg;
+
+    row.appendChild(bubble);
+    threadBody.appendChild(row);
+
+    // Scroll to bottom
+    threadBody.scrollTop = threadBody.scrollHeight;
+  }
+
+  // Helper to get CSRF token from cookie
+  function getCsrfToken() {
+    const name = 'csrftoken=';
+    const decoded = decodeURIComponent(document.cookie);
+    const ca = decoded.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i].trim();
+      if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
+    }
+    return '';
+  }
+</script>
+
 </body>
 </html>
