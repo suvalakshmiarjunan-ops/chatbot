@@ -36,7 +36,8 @@ urlpatterns = [
     
     # whatsapp
     path('get_message/', whatsappcontroller.get_message, name='get_message'),
-     path('send_whatsapp_message/', whatsappcontroller.send_whatsapp_message,name='send_whatsapp_message'),
+    path('send_whatsapp_message/', whatsappcontroller.send_whatsapp_message,name='send_whatsapp_message'),
+    path('disconnect/',whatsappcontroller.disconnect,name='disconnect'), 
     
     path('flows/', views.flows_view, name='flows'),
     path('admin/', admin.site.urls),
