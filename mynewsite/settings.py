@@ -85,8 +85,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME':'chat_py',
-        'USER':'root',
-        'PASSWORD':'',
+        'USER':'django_user',
+        'PASSWORD':'your_password',
         'HOST':'127.0.0.1',
         'PORT':'3306',
         'OPTIONS':{
