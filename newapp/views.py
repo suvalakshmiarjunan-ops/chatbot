@@ -8,7 +8,7 @@ import requests
 from .models import User
 from datetime import datetime
 # from .models import Message
-from pinecone_plugins.assistant.models.chat import Message as Pinemessage
+# from pinecone_plugins.assistant.models.chat import Message as Pinemessage
 
 from django.http import JsonResponse
 from pinecone import Pinecone
