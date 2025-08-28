@@ -67,6 +67,8 @@ class whatsappcontroller:
                 return
             
             token = Admin.objects.filter(whatsapp_phone_id=phone_number_id).values_list('whatsapp_token', flat=True).first()
+            if token is None or token =='':
+                return
           
 
             if request.method == 'POST':
@@ -126,82 +128,104 @@ class whatsappcontroller:
                     error_message = f"❌ Exception occurred: {str(e)}"
         return
 
+
     @csrf_exempt
     def get_message(request):
-        end = True
         VERIFY_TOKEN = "speeed"
-        if end is True:
-            if request.method == 'GET':
-                mode = request.GET.get('hub.mode')
-                token = request.GET.get('hub.verify_token')
-                challenge = request.GET.get('hub.challenge')
+        
+        # Token verification (GET request)
+        if request.method == 'GET':
+            mode = request.GET.get('hub.mode')
+            token = request.GET.get('hub.verify_token')
+            challenge = request.GET.get('hub.challenge')
 
-                if mode == 'subscribe' and token == VERIFY_TOKEN:
-                    return HttpResponse(challenge, status=200)
-                else:
-                    return HttpResponse("Token verification failed", status=403)
+            if mode == 'subscribe' and token == VERIFY_TOKEN:
+                return HttpResponse(challenge, status=200)
+            else:
+                return HttpResponse("Token verification failed", status=403)
 
-            elif request.method == 'POST':
-                try:
-                    data = json.loads(request.body)
+        # Process incoming message (POST request)
+        if request.method == 'POST':
+            try:
+                # Parse the incoming JSON data
+                data = json.loads(request.body)
+                
+                # Check if 'entry' exists and has data
+                entries = data.get('entry', [])
+                if not entries:
+                    return HttpResponse("No entries found", status=400)
 
-                    entry = data.get('entry', [])[0]
-                    changes = entry.get('changes', [])[0]
-                    value = changes.get('value', {})
-                    messages = value.get('messages', [])[0]
-                    meta_data = value.get("metadata", {})
-                    phone_number_id = meta_data.get('phone_number_id')
-                    # print(phone_number_id)
-                    admin_check = Admin.objects.filter(
-                        whatsapp_phone_id=phone_number_id).first()
-                    print(admin_check.pinecone_token)
-                    if not admin_check:
-                        return
-                    phone = messages.get('from')  # WhatsApp number
-                    msg_text = messages.get('text', {}).get('body')
+                # Extract the first entry and its changes
+                entry = entries[0]
+                changes = entry.get('changes', [])[0]
+                value = changes.get('value', {})
 
-                    existing_user = User.objects.filter(phone_no=phone).first()
+                # Extract relevant information
+                messages = value.get('messages', [])[0]
+                meta_data = value.get("metadata", {})
+                phone_number_id = meta_data.get('phone_number_id')
 
-                    if not existing_user:
-                        admin_id = request.session.get('admin_id')
-                        admin_oid = Admin.objects.get(id=admin_id)
-                        existing_user = User.objects.create(
-                            name='user',
-                            admin_id=admin_oid,
-                            phone_no=phone,
-                            created_at=datetime.now()
-                        )
-                        print(f"✅ New user created: {existing_user.id}")
+                # Check for admin with the phone number ID
+                admin_check = Admin.objects.filter(whatsapp_phone_id=phone_number_id).first()
+                if not admin_check:
+                    return HttpResponse("Admin not found", status=404)
 
-                    Message.objects.create(
-                        user_id=existing_user,
-                        messages=msg_text,
-                        created_at=datetime.now(),
-                        who='human'
+                # Extract message content and phone number
+                phone = messages.get('from')  # WhatsApp number
+                msg_text = messages.get('text', {}).get('body')
+
+                # Find or create a user
+                existing_user = User.objects.filter(phone_no=phone).first()
+                if not existing_user:
+                    admin_oid = Admin.objects.get(id=admin_check.id)
+                    existing_user = User.objects.create(
+                        name='user',
+                        admin_id=admin_oid,
+                        phone_no=phone,
+                        created_at=datetime.now()  # Ensure timezone-aware datetime
                     )
+                    print(f"✅ New user created: {existing_user.id}")
 
-                    pc = Pinecone(
-                        api_key=admin_check.pinecone_token)
+                # Store the received message in the database
+                Message.objects.create(
+                    user_id=existing_user,
+                    messages=msg_text,
+                    created_at=datetime.now(),  # Ensure timezone-aware datetime
+                    who='human'
+                )
 
-                    assistant = pc.assistant.Assistant(assistant_name="yahi")
+                # Use Pinecone to get the bot's response
+                pc = Pinecone(api_key=admin_check.pinecone_token)
+                assistant = pc.assistant.Assistant(assistant_name="yahi")
+                msg = Pinemessage(content=msg_text)
+                resp = assistant.chat(messages=[msg])
 
-                    msg = Pinemessage(content=msg_text)
-                    resp = assistant.chat(messages=[msg])
+                # Extract the bot's response
+                bot_response = resp["message"]["content"]  # content
+                print(bot_response)
 
-                    bot_response = resp["message"]["content"]  # content
-                    print(bot_response)
-                    phone_number = phone
-                    payload = {
-                        "phone": phone_number,
-                        "message": bot_response,
-                        "phone_number_id": phone_number_id
-                    }
-                    response = requests.post(
-                        "https://07377353818c.ngrok-free.app/send_whatsapp_message/", data=payload)
-                    
-                    end = False
-                    return HttpResponse("Message stored", status=200)
+                # Send the bot's response back via WhatsApp
+                payload = {
+                    "phone": phone,
+                    "message": bot_response,
+                    "phone_number_id": phone_number_id
+                }
+                response = requests.post("https://5da140393034.ngrok-free.app/send_whatsapp_message/", data=payload)
+                admin_check=None
+                return HttpResponse("Message stored", status=200)
 
-                except Exception as e:
-                    print("Webhook Error:", str(e))
-                    return HttpResponse(f"Error: {str(e)}", status=400)
+            except Exception as e:
+                # Catch any errors and return an appropriate message
+                print(f"Webhook Error: {str(e)}")
+                return HttpResponse(f"Error: {str(e)}", status=400)
+            return
+        return
+    
+    def disconnect(request):
+        
+        admin_id=request.session.get('admin_id')
+        Admin.objects.filter(id=admin_id).update(whatsapp_phone_id='', whatsapp_token='')
+        messages.warning(request, 'Invalid email or password')
+        return redirect('/setting/channels')
+        
+

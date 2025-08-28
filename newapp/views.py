@@ -8,7 +8,7 @@ import requests
 from .models import User
 from datetime import datetime
 # from .models import Message
-from pinecone_plugins.assistant.models.chat import Message as Pinemessage
+# from pinecone_plugins.assistant.models.chat import Message as Pinemessage
 
 from django.http import JsonResponse
 from pinecone import Pinecone
@@ -474,3 +474,30 @@ def chatgpt_respond(request):
 
     return JsonResponse({'error': 'Invalid HTTP method'}, status=405)
 
+from django.shortcuts import render, redirect
+from .forms import TaggingForm
+from .models import Tag, User, UserTag
+
+def tag_view(request):
+    tag_list = []
+    if request.method == 'POST':
+        form = TaggingForm(request.POST)
+        if form.is_valid():
+            tag_name = form.cleaned_data['tag_name']
+            users = form.cleaned_data['users']
+            tag, created = Tag.objects.get_or_create(name=tag_name)
+            for user in users:
+                UserTag.objects.get_or_create(user=user, tag=tag)
+            return redirect('add_tag')  # prevents resubmission on page refresh
+    else:
+        form = TaggingForm()
+
+    tags = Tag.objects.all()
+    for tag in tags:
+        tagged_users = User.objects.filter(usertag__tag=tag)
+        tag_list.append({'tag': tag, 'users': tagged_users})
+
+    return render(request, 'contact/tag.html', {
+        'form': form,
+        'tag_list': tag_list,
+    })

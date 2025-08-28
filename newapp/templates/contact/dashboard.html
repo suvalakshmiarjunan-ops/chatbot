@@ -145,6 +145,34 @@
     a{
       text-decoration: none;
     }
+
+    .dropdown {
+  position: relative;
+  display: inline-block;
+}
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background: #fff;
+  min-width: 120px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+  z-index: 99;
+}
+.dropdown-content a {
+  color: #111;
+  padding: 10px 16px;
+  display: block;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.dropdown-content a:hover {
+  background: #f1f5f9;
+}
+
   </style>
 </head>
 <body>
@@ -163,7 +191,13 @@
         <input id="searchInput" type="text" placeholder="Search anything here..." />
       </div>
       <button class="btn">Filter</button>
-      <button class="btn">More</button>
+      <div class="dropdown">
+        <button class="btn" id="moreBtn">More</button>
+        <div class="dropdown-content" id="dropdownMenu" style="display: none;">
+          <a href="{% url 'add_tag' %}" id="addTagOption">Add Tag</a>
+        </div>
+      </div>
+      
       <a href="{% url 'add_user' %}" class="btn"><span>Add User</span></a>
     </div>
 
@@ -213,6 +247,27 @@
         }
       });
     })();
+
+    (function() {
+  // Toggle dropdown visibility when clicking 'More' button
+  const moreBtn = document.getElementById('moreBtn');
+  const dropdownMenu = document.getElementById('dropdownMenu');
+
+  moreBtn && moreBtn.addEventListener('click', function(e) {
+    e.stopPropagation(); // prevent event bubbling
+    if (dropdownMenu.style.display === 'block') {
+      dropdownMenu.style.display = 'none';
+    } else {
+      dropdownMenu.style.display = 'block';
+    }
+  });
+
+  // Close the dropdown when clicking outside
+  document.addEventListener('click', function() {
+    dropdownMenu.style.display = 'none';
+  });
+})();
+
   </script>
 </body>
 </html>

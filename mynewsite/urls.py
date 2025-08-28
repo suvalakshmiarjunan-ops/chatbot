@@ -28,6 +28,10 @@ urlpatterns = [
     path('contact/dashboard',Contactcontroller.dashboard,name='contact_dashboard'),
     path('contact/add',Contactcontroller.add_user,name='add_user'),
     path('contact/add_admin_user',Contactcontroller.add_admin_user,name='add_admin_user'),
+    path('contact/tag/', views.tag_view, name='add_tag'),
+
+    
+    
     # setting
     path('settings/',Settingcontroller.dashboard , name='settings'),
     # setting
@@ -46,7 +50,8 @@ urlpatterns = [
     
     # whatsapp
     path('get_message/', whatsappcontroller.get_message, name='get_message'),
-     path('send_whatsapp_message/', whatsappcontroller.send_whatsapp_message,name='send_whatsapp_message'),
+    path('send_whatsapp_message/', whatsappcontroller.send_whatsapp_message,name='send_whatsapp_message'),
+    path('disconnect/',whatsappcontroller.disconnect,name='disconnect'), 
     
     path('flows/', views.flows_view, name='flows'),
     path('admin/', admin.site.urls),
