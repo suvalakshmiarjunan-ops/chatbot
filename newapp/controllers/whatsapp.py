@@ -173,7 +173,8 @@ class whatsappcontroller:
                 # Extract message content and phone number
                 phone = messages.get('from')  # WhatsApp number
                 msg_text = messages.get('text', {}).get('body')
-
+                if msg_text =='':
+                    return
                 # Find or create a user
                 existing_user = User.objects.filter(phone_no=phone).first()
                 if not existing_user:

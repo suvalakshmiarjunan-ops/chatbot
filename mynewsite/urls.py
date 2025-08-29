@@ -8,6 +8,7 @@ from newapp.controllers.inbox import Inboxcontroller
 from newapp.controllers.contact import Contactcontroller
 from newapp.controllers.settings import Settingcontroller
 from newapp.controllers.whatsapp import whatsappcontroller
+from newapp.controllers.integration import Integrationcontroller
 
 
 urlpatterns = [
@@ -28,9 +29,10 @@ urlpatterns = [
     path('contact/add_admin_user',Contactcontroller.add_admin_user,name='add_admin_user'),
     # setting
     path('settings/',Settingcontroller.dashboard , name='settings'),
-    # setting
+   # channels
     path('setting/channels', Settingcontroller.channels_view, name='channels_view'),
-    # channels
+    # integration
+    path('setting/integration',Settingcontroller.integration,name='integration_view'),
     path('whatsapp_connect',whatsappcontroller.connect,name='whatsapp_connect'),
     
     
@@ -38,6 +40,10 @@ urlpatterns = [
     path('get_message/', whatsappcontroller.get_message, name='get_message'),
     path('send_whatsapp_message/', whatsappcontroller.send_whatsapp_message,name='send_whatsapp_message'),
     path('disconnect/',whatsappcontroller.disconnect,name='disconnect'), 
+    
+    # pinecone
+    path('disconnect_pinecone/',Integrationcontroller.dissconnect,name='dissconnect'),
+    path('connect_pinecone_token/',Integrationcontroller.connect,name='pinecone_connect'),
     
     path('flows/', views.flows_view, name='flows'),
     path('admin/', admin.site.urls),

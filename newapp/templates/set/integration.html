@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Integration Channels</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Font Awesome (optional) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+  <!-- (Optional) put CSRF into a meta tag if you prefer grabbing it from DOM -->
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <style>
+    :root { --sidebar-w: 250px; }
+    html, body { height: 100%; }
+    body { margin: 0; background:#f7f8fb; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#0f172a; }
+
+    .sidebar{
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-w);
+      background: #0b1324;
+      color: #cbd5e1;
+      overflow-y: auto;
+      z-index: 1030;
+    }
+
+    .main{
+      margin-left: var(--sidebar-w);
+      min-height: 100vh;
+      padding: 24px;
+      display: block;
+    }
+
+    @media (max-width: 991.98px){
+      .main{ margin-left: 0; }
+    }
+
+    .channel-card{
+      border-radius: 1rem;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: .15s ease-in-out;
+    }
+    .channel-card:hover{ transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.06); }
+    .icon-box{ width:44px;height:44px;border-radius:.75rem;display:grid;place-items:center;background:#f1f5f9;}
+    .icon-pine{ background:#e0f2fe; }
+    .icon-chatgpt{ background:#dcfce7; }
+    .fw-semibold{ font-weight:600; }
+  </style>
+</head>
+<body>
+  {% include 'layouts/sidebar.html' %}
+
+  <main class="main">
+    <div class="container py-4">
+      <h5 class="mb-4">Settings &gt; <b>Integration</b></h5>
+
+      <div class="d-grid gap-3">
+        <!-- Pinecone -->
+        {% if pinecone_connected %}
+          <a href="javascript:void(0)" class="text-decoration-none text-reset" id="disconnect">
+        {% else %}
+          <a href="javascript:void(0)" class="text-decoration-none text-reset" id="connect">
+        {% endif %}
+          <div class="channel-card">
+            <div class="d-flex align-items-center gap-3">
+              <div class="icon-box icon-pine">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2l7 4v8l-7 4-7-4V6l7-4z" stroke="#0ea5e9" stroke-width="2"/>
+                  <path d="M12 6l7 4-7 4-7-4 7-4z" stroke="#0ea5e9" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="fw-semibold">Pinecone</div>
+            </div>
+            <span class="text-muted">&rsaquo;</span>
+            {% if pinecone_connected %}
+              <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected" id="connected"></i>
+            {% else %}
+              <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected"></i>
+            {% endif %}
+          </div>
+        </a>
+
+        <!-- ChatGPT (placeholder) -->
+        <a href="#" class="text-decoration-none text-reset">
+          <div class="channel-card">
+            <div class="d-flex align-items-center gap-3">
+              <div class="icon-box icon-chatgpt">
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+                  <path d="M12 2a7 7 0 017 7c0 .7-.1 1.3-.3 1.9a5 5 0 01-1.9 9.6h-10a5 5 0 01-1.9-9.6A7 7 0 0112 2z" stroke="#16a34a" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="fw-semibold">ChatGPT</div>
+            </div>
+            <span class="text-muted">&rsaquo;</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Pinecone Modal -->
+  <div class="modal fade" id="pineconeModal" tabindex="-1" aria-labelledby="pineconeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pineconeModalLabel">Pinecone Integration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          {% if pinecone_connected %}
+            <p>Pinecone is currently <b>connected</b>. Do you want to disconnect?</p>
+          {% else %}
+            <div class="mb-3">
+              <label for="pineconeKey" class="form-label">Pinecone API Key</label>
+              <input type="text" id="pineconeKey" class="form-control" placeholder="Enter Pinecone API Key" />
+              <div class="form-text">We’ll store this securely to enable Pinecone features.</div>
+            </div>
+          {% endif %}
+          <div id="pineconeAlert" class="alert d-none" role="alert"></div>
+        </div>
+
+        <div class="modal-footer">
+          {% if pinecone_connected %}
+            <button type="button" class="btn btn-danger" id="confirmDisconnect">Disconnect</button>
+          {% else %}
+            <button type="button" class="btn btn-success" id="confirmConnect">Connect</button>
+          {% endif %}
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS (bundle includes Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // --- CSRF helper for Django POST ---
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    }
+    const csrfFromCookie = getCookie('csrftoken');
+    const csrfFromMeta = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const CSRF_TOKEN = csrfFromCookie || csrfFromMeta || '';
+
+    // Modal instance
+    const pineconeModalEl = document.getElementById('pineconeModal');
+    const pineconeModal = new bootstrap.Modal(pineconeModalEl);
+
+    // Card triggers
+    const disconnectLink = document.getElementById('disconnect');
+    const connectLink = document.getElementById('connect');
+
+    if (disconnectLink) {
+      disconnectLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        pineconeModal.show();
+      });
+    }
+    if (connectLink) {
+      connectLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        pineconeModal.show();
+      });
+    }
+
+    // Alert helper
+    function showAlert(message, type = 'info') {
+      const alertEl = document.getElementById('pineconeAlert');
+      alertEl.className = `alert alert-${type}`;
+      alertEl.textContent = message;
+      alertEl.classList.remove('d-none');
+    }
+    function clearAlert() {
+      const alertEl = document.getElementById('pineconeAlert');
+      alertEl.classList.add('d-none');
+      alertEl.textContent = '';
+    }
+
+    // Disconnect handler
+    const confirmDisconnectBtn = document.getElementById('confirmDisconnect');
+    if (confirmDisconnectBtn) {
+      confirmDisconnectBtn.addEventListener('click', async () => {
+        clearAlert();
+        try {
+          const res = await fetch('{% url "dissconnect" %}', { method: 'GET' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          showAlert(data?.msg || 'Disconnected', 'success');
+          setTimeout(() => window.location.reload(), 600);
+        } catch (err) {
+          showAlert('Failed to disconnect. ' + err.message, 'danger');
+        }
+      });
+    }
+
+    // Connect handler
+    const confirmConnectBtn = document.getElementById('confirmConnect');
+    if (confirmConnectBtn) {
+      confirmConnectBtn.addEventListener('click', async () => {
+        clearAlert();
+        const keyInput = document.getElementById('pineconeKey');
+        const apiKey = keyInput?.value?.trim();
+        if (!apiKey) {
+          showAlert('Please enter an API key.', 'warning');
+          return;
+        }
+        try {
+          const origin=window.location.origin+'/connect_pinecone_token/'
+          console.log(origin)
+            const res = await fetch(origin, {
+            method: 'POST',
+            body: JSON.stringify({ api_key: apiKey })
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          console.log(data)
+          showAlert(data?.msg || 'Connected', 'success',);
+          setTimeout(() => window.location.reload(), 600);
+        } catch (err) {
+          showAlert('Failed to connect. ' + err.message, 'danger');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
