@@ -24,7 +24,9 @@ from .models import Admin
 import openai
 from openai import OpenAI
 
-
+from django.shortcuts import render, redirect
+from .forms import TaggingForm
+from .models import Tag, User, UserTag
 
 
 
@@ -420,63 +422,61 @@ def integration_view(request):
     # Render the integrations page template
     return render(request, 'set/integration.html')
 
-@csrf_exempt
-def chatgpt_integration(request):
-    if request.method == 'POST':
-        api_key = request.POST.get('api_key')
+# @csrf_exempt
+# def chatgpt_integration(request):
+#     if request.method == 'POST':
+#         api_key = request.POST.get('api_key')
 
-        if api_key:
-            # Store the API key in the database (e.g., in the Admin model)
-            admin = Admin.objects.first()  # Update logic to select current admin as needed
-            admin.openai_api_key = api_key
-            admin.save()
+#         if api_key:
+#             # Store the API key in the database (e.g., in the Admin model)
+#             admin = Admin.objects.first()  # Update logic to select current admin as needed
+#             admin.openai_api_key = api_key
+#             admin.save()
 
-            # Save the API key in session
-            request.session['openai_api_key'] = api_key
+#             # Save the API key in session
+#             request.session['openai_api_key'] = api_key
 
-            # Test API key by making a simple OpenAI request using the new API:
-            import openai
-            openai.api_key = api_key
-            try:
-                models = openai.models.list()  # New method to check API access
-                return JsonResponse({'status': 'success', 'message': 'ChatGPT integrated successfully.'})
-            except openai.error.AuthenticationError:
-                return JsonResponse({'status': 'error', 'error': 'Invalid API Key.'}, status=400)
-            except Exception as e:
-                # Catch other exceptions such as network issues, rate limits, etc.
-                return JsonResponse({'status': 'error', 'error': f'OpenAI error: {str(e)}'}, status=400)
+#             # Test API key by making a simple OpenAI request using the new API:
+#             import openai
+#             openai.api_key = api_key
+#             try:
+#                 models = openai.models.list()  # New method to check API access
+#                 return JsonResponse({'status': 'success', 'message': 'ChatGPT integrated successfully.'})
+#             except openai.error.AuthenticationError:
+#                 return JsonResponse({'status': 'error', 'error': 'Invalid API Key.'}, status=400)
+#             except Exception as e:
+#                 # Catch other exceptions such as network issues, rate limits, etc.
+#                 return JsonResponse({'status': 'error', 'error': f'OpenAI error: {str(e)}'}, status=400)
 
-        return JsonResponse({'status': 'error', 'error': 'API Key is required.'}, status=400)
+#         return JsonResponse({'status': 'error', 'error': 'API Key is required.'}, status=400)
 
-    return JsonResponse({'status': 'error', 'error': 'Invalid method.'}, status=400)
+#     return JsonResponse({'status': 'error', 'error': 'Invalid method.'}, status=400)
 
 
 
-@csrf_exempt
-def chatgpt_respond(request):
-    if request.method == 'POST':
-        user_message = request.POST.get('message')
-        api_key = request.session.get('openai_api_key')
-        if not api_key:
-            return JsonResponse({'error': 'ChatGPT integration not configured'}, status=400)
+# @csrf_exempt
+# def chatgpt_respond(request):
+#     if request.method == 'POST':
+#         user_message = request.POST.get('message')
+#         api_key = request.session.get('openai_api_key')
+#         if not api_key:
+#             return JsonResponse({'error': 'ChatGPT integration not configured'}, status=400)
 
-        try:
-            client = OpenAI(api_key=api_key)
-            response = client.chat.completions.create(
-                model="gpt-4",  # or "gpt-3.5-turbo"
-                messages=[{"role": "user", "content": user_message}],
-            )
-            reply = response.choices[0].message.content
-            return JsonResponse({'reply': reply})
+#         try:
+#             client = OpenAI(api_key=api_key)
+#             response = client.chat.completions.create(
+#                 model="gpt-4",  # or "gpt-3.5-turbo"
+#                 messages=[{"role": "user", "content": user_message}],
+#             )
+#             reply = response.choices[0].message.content
+#             return JsonResponse({'reply': reply})
 
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)}, status=500)
 
-    return JsonResponse({'error': 'Invalid HTTP method'}, status=405)
+#     return JsonResponse({'error': 'Invalid HTTP method'}, status=405)
 
-from django.shortcuts import render, redirect
-from .forms import TaggingForm
-from .models import Tag, User, UserTag
+
 
 def tag_view(request):
     tag_list = []
