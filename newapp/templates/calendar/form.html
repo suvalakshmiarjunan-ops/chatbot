@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Speedbots — Create Event</title>
+  <style>
+    :root { --sb-blue:#2563eb; --sb-blue-600:#1d4ed8; --bg:#f7f8fb; --card:#fff; --text:#0f172a; --muted:#475569; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);
+         min-height:100vh;display:grid;place-items:center;padding:24px}
+    .wrap{width:100%;max-width:560px}
+    .brand{text-align:center;margin-bottom:18px;font-weight:800;color:var(--sb-blue);font-size:clamp(28px,4vw,36px)}
+    .card{background:var(--card);border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 10px 30px rgba(2,6,23,.06);padding:22px}
+    .subtitle{margin:0 0 14px;color:var(--muted);font-size:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input,textarea{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #dbe1ea;background:#fff;color:var(--text);font-size:15px}
+    textarea{min-height:90px;resize:vertical}
+    input:focus,textarea:focus{outline:none;border-color:var(--sb-blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+    .mb-14{margin-bottom:14px}
+    .actions{margin-top:10px}
+    button{width:100%;border:none;cursor:pointer;padding:12px 16px;border-radius:12px;background:var(--sb-blue);color:#fff;font-weight:700;font-size:16px}
+    button:hover{background:var(--sb-blue-600)}
+    .note{text-align:center;margin-top:10px;font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">Speedbots</div>
+    <form class="card" id="eventForm">
+      <p class="subtitle">Fill the details and submit to create an event.</p>
+
+      <div class="row">
+        <div>
+          <label for="date">Date</label>
+          <input id="date" name="date" type="date" required />
+        </div>
+        <div>
+          <label for="time">Time</label>
+          <input id="time" name="time" type="time" value="10:00" required />
+        </div>
+      </div>
+
+      <div class="mb-14">
+        <label for="title">Title</label>
+        <input id="title" name="title" type="text" placeholder="Appointment" value="Appointment"/>
+      </div>
+
+      <div class="mb-14">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" placeholder="Optional details..."></textarea>
+      </div>
+
+      <div class="mb-14">
+        <label for="duration">Duration (minutes)</label>
+        <input id="duration" name="duration" type="number" min="1" step="1" value="60" required/>
+      </div>
+
+      <div class="actions">
+        <button type="submit">Submit</button>
+      </div>
+
+      <div class="note" id="status" aria-live="polite"></div>
+    </form>
+  </div>
+
+  <script>
+    // Prefill date with today in local timezone
+    (function setToday() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const dd = String(d.getDate()).padStart(2,"0");
+      document.getElementById('date').value = `${yyyy}-${mm}-${dd}`;
+    })();
+
+    document.getElementById('eventForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const date = document.getElementById('date').value;
+      const time = document.getElementById('time').value || '10:00';
+      const title = (document.getElementById('title').value || 'Appointment').trim();
+      const description = document.getElementById('description').value.trim() || '';
+      const duration = parseInt(document.getElementById('duration').value || '60', 10);
+
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = 'Submitting…';
+
+      try {
+        const resp = await fetch('/create-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date, time, title, description, duration })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        statusEl.textContent = data?.message || `✅ Event created: ${data?.link || ''}`;
+      } catch (err) {
+        statusEl.textContent = `❌ Error: ${err.message}`;
+      }
+    });
+  </script>
+</body>
+</html>

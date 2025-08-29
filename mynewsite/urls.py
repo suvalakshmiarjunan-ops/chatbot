@@ -40,6 +40,8 @@ urlpatterns = [
     path('get_message/', whatsappcontroller.get_message, name='get_message'),
     path('send_whatsapp_message/', whatsappcontroller.send_whatsapp_message,name='send_whatsapp_message'),
     path('disconnect/',whatsappcontroller.disconnect,name='disconnect'), 
+    path('send_trigger/',whatsappcontroller.send_trigger,name='send_trigger'),
+    path('appointment_date/',whatsappcontroller.appointment_date,name='appointment_date'),
     
     # pinecone
     path('disconnect_pinecone/',Integrationcontroller.dissconnect,name='dissconnect'),

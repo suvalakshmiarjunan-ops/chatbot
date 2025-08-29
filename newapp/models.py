@@ -9,6 +9,7 @@ class Admin(models.Model):
     pinecone_token=models.TextField()
     created_at=models.DateTimeField(auto_now_add=True)
     display_phone_no=models.TextField()
+    goolgle_calendar=models.TextField()
     
     class Meta:
         managed=False

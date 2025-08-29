@@ -27,4 +27,8 @@ class Integrationcontroller:
                 })
             except Exception as e:
                 return JsonResponse({"msg": str(e)}, status=500)
+            return
+    
+
+    
             
