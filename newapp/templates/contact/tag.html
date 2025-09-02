@@ -1,6 +1,7 @@
 {% extends 'layouts/base.html' %}
 
 {% block title %}Add Tag - Speedbots{% endblock %}
+{% load static %}
 
 {% block content %}
 <div class="main" style="padding:24px 32px; max-width:900px;">
@@ -13,7 +14,7 @@
   </div>
   <hr>
   <h2>Tags and Assigned Users</h2>
-  <table class="table table-hover" style="background:#fff">
+  <table class="table table-hover" style="background:#fff; margin:auto;">
     <thead>
       <tr>
         <th style="width:40px"></th>
@@ -60,32 +61,29 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-
-          <!-- Modern Tag Name input using Bootstrap 5 input group -->
           <div class="mb-3">
             <label for="id_tag_name" class="form-label" style="font-weight:600;">Tag Name</label>
             <div class="input-group input-group-lg">
               <span class="input-group-text" id="tagname-addon">🏷️</span>
-              <!-- Text input, name and id must match your form's tag_name -->
               <input 
                 type="text" 
-                name="tag_name" 
-                id="id_tag_name" 
-                class="form-control" 
-                placeholder="Enter a tag name (e.g., Active Customers)" 
-                aria-describedby="tagname-addon" 
-                autocomplete="off" 
+                name="tag_name"
+                id="id_tag_name"
+                class="form-control"
+                placeholder="Enter a tag name (e.g., Active Customers)"
+                aria-describedby="tagname-addon"
+                autocomplete="off"
                 required
               >
             </div>
-            <!-- Validation errors can go here if you want -->
+            {% if form.tag_name.errors %}
+              <div class="text-danger">{{ form.tag_name.errors }}</div>
+            {% endif %}
           </div>
 
           <hr>
-
           <label for="user-search">Search Users:</label>
           <input type="text" id="user-search" class="form-control mb-2" placeholder="Type to filter users..." onkeyup="filterUsers()">
-
           {{ form.users }}
           {% if form.users.errors %}
             <div class="text-danger">{{ form.users.errors }}</div>
@@ -125,22 +123,10 @@ function filterUsers() {
 </script>
 
 <style>
-.tag-row:focus {
-  background: #e6f0fa;
-  outline: none;
-}
-.tag-row:hover {
-  background: #f1f5f9;
-}
-.tag-users-row td {
-  border-top: none !important;
-}
-#id_users {
-  height: 200px;
-  width: 100%;
-}
-.input-group-text {
-  font-size: 1.2rem;
-}
+.tag-row:focus { background: #e6f0fa; outline: none; }
+.tag-row:hover { background: #f1f5f9; }
+.tag-users-row td { border-top: none !important; }
+#id_users { height: 200px; width: 100%; }
+.input-group-text { font-size: 1.2rem; }
 </style>
 {% endblock %}

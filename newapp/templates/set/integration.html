@@ -103,28 +103,8 @@
             <span class="text-muted">&rsaquo;</span>
           </div>
         </a>
-        <!-- googleCalendar -->
-        <a href="javascript:void(0)" class="text-decoration-none text-reset" id="googleCalendarToggle">
-          <div class="channel-card">
-            <div class="d-flex align-items-center gap-3">
-              <div class="icon-box" style="background:#4285f4; color: white;">
-                <i class="fa-brands fa-google" style="font-size: 22px;"></i>
-              </div>
-              <div class="fw-semibold">Google Calendar</div>
-            </div>
-            <span class="text-muted">&rsaquo;</span>
-            {% if google_calendar_connected %}
-              <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected" id="googleCalendarStatus"></i>
-            {% else %}
-              <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected" id="googleCalendarStatus"></i>
-            {% endif %}
-          </div>
-        </a>
-        
       </div>
     </div>
-    
-    
   </main>
 
   <!-- Pinecone Modal -->
@@ -160,119 +140,10 @@
       </div>
     </div>
   </div>
-<!-- googleCalendar -->
-<div class="modal fade" id="googleCalendarModal" tabindex="-1" aria-labelledby="googleCalendarModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="googleCalendarModalLabel">Google Calendar Integration</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label for="googleCalendarId" class="form-label">Calendar ID</label>
-          <input type="text" id="googleCalendarId" class="form-control" placeholder="Enter Google Calendar ID" value="{{ google_calendar_id|default:'' }}" />
-          <div class="form-text">Stored securely in admin settings.</div>
-        </div>
-        <div id="googleCalendarAlert" class="alert d-none" role="alert"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-success" id="googleCalendarSaveBtn">Connect</button>
-        <button type="button" class="btn btn-danger" id="googleCalendarDisconnectBtn">Disconnect</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
 
-  
   <!-- Bootstrap 5 JS (bundle includes Popper) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    // Paste the entire JavaScript code here
-    const googleCalendarModalEl = document.getElementById('googleCalendarModal');
-const googleCalendarModal = new bootstrap.Modal(googleCalendarModalEl);
-const googleCalendarToggle = document.getElementById('googleCalendarToggle');
-const googleCalendarStatus = document.getElementById('googleCalendarStatus');
-const googleCalendarIdInput = document.getElementById('googleCalendarId');
-const googleCalendarAlert = document.getElementById('googleCalendarAlert');
-const googleCalendarSaveBtn = document.getElementById('googleCalendarSaveBtn');
-const googleCalendarDisconnectBtn = document.getElementById('googleCalendarDisconnectBtn');
 
-function showAlert(message, type = 'info') {
-  googleCalendarAlert.className = `alert alert-${type}`;
-  googleCalendarAlert.textContent = message;
-  googleCalendarAlert.classList.remove('d-none');
-}
-
-function clearAlert() {
-  googleCalendarAlert.classList.add('d-none');
-  googleCalendarAlert.textContent = '';
-}
-
-async function updateStatus(connected) {
-  if (connected) {
-    googleCalendarStatus.className = 'fa-solid fa-circle-check text-success ms-1';
-    googleCalendarStatus.title = 'connected';
-    googleCalendarStatus.setAttribute('aria-label', 'connected');
-  } else {
-    googleCalendarStatus.className = 'fa-solid fa-circle-xmark text-danger ms-1';
-    googleCalendarStatus.title = 'not connected';
-    googleCalendarStatus.setAttribute('aria-label', 'not connected');
-  }
-}
-
-googleCalendarToggle.addEventListener('click', () => {
-  clearAlert();
-  googleCalendarModal.show();
-});
-
-googleCalendarSaveBtn.addEventListener('click', async () => {
-  const calendarId = googleCalendarIdInput.value.trim();
-  if (!calendarId) {
-    showAlert('Please enter a Calendar ID.', 'warning');
-    return;
-  }
-  clearAlert();
-  try {
-    const res = await fetch('/admin/connect_google_calendar/', { // replace with your connect API URL
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-      body: JSON.stringify({ calendar_id: calendarId }),
-    });
-    if (!res.ok) throw new Error('Failed to connect');
-    const data = await res.json();
-    showAlert(data.msg || 'Connected', 'success');
-    updateStatus(true);
-    setTimeout(() => googleCalendarModal.hide(), 1000);
-  } catch (err) {
-    showAlert(err.message || 'Failed to connect', 'danger');
-  }
-});
-
-googleCalendarDisconnectBtn.addEventListener('click', async () => {
-  clearAlert();
-  try {
-    const res = await fetch('/admin/disconnect_google_calendar/', { // replace with your disconnect API URL
-      method: 'POST',
-      headers: { 'X-CSRFToken': CSRF_TOKEN },
-    });
-    if (!res.ok) throw new Error('Failed to disconnect');
-    const data = await res.json();
-    showAlert(data.msg || 'Disconnected', 'success');
-    updateStatus(false);
-    setTimeout(() => googleCalendarModal.hide(), 1000);
-  } catch (err) {
-    showAlert(err.message || 'Failed to disconnect', 'danger');
-  }
-});
-
-// Initialize connection status on page load from backend context
-const initialStatus = {{ google_calendar_connected|yesno:"true,false" }};
-updateStatus(initialStatus);
-
-    </script>
-    
   <script>
     // --- CSRF helper for Django POST ---
     function getCookie(name) {

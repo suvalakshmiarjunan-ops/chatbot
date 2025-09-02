@@ -9,10 +9,6 @@ from newapp.controllers.contact import Contactcontroller
 from newapp.controllers.settings import Settingcontroller
 from newapp.controllers.whatsapp import whatsappcontroller
 from newapp.controllers.integration import Integrationcontroller
-from newapp.controllers.integration import Integrationcontroller
-
-
-
 
 
 urlpatterns = [
@@ -32,6 +28,7 @@ urlpatterns = [
     path('contact/add',Contactcontroller.add_user,name='add_user'),
     path('contact/add_admin_user',Contactcontroller.add_admin_user,name='add_admin_user'),
     path('contact/tag/', views.tag_view, name='add_tag'),
+    
     # setting
     path('settings/',Settingcontroller.dashboard , name='settings'),
    # channels
@@ -39,8 +36,8 @@ urlpatterns = [
     # integration
     path('setting/integration',Settingcontroller.integration,name='integration_view'),
     path('whatsapp_connect',whatsappcontroller.connect,name='whatsapp_connect'),
-    path('admin/connect_google_calendar/', Integrationcontroller.connect_google_calendar, name='connect_google_calendar'),
-    path('admin/disconnect_google_calendar/', Integrationcontroller.disconnect_google_calendar, name='disconnect_google_calendar'),
+    #path('admin/connect_google_calendar/', Integrationcontroller.connect_google_calendar, name='connect_google_calendar'),
+    #path('admin/disconnect_google_calendar/', Integrationcontroller.disconnect_google_calendar, name='disconnect_google_calendar'),
 
     
     
@@ -50,6 +47,8 @@ urlpatterns = [
     path('disconnect/',whatsappcontroller.disconnect,name='disconnect'), 
     path('send_trigger/',whatsappcontroller.send_trigger,name='send_trigger'),
     path('appointment_date/',whatsappcontroller.appointment_date,name='appointment_date'),
+    
+    
     
     # pinecone
     path('disconnect_pinecone/',Integrationcontroller.dissconnect,name='dissconnect'),

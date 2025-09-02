@@ -16,6 +16,13 @@ from pinecone import Pinecone
 from django.utils import timezone
 from .models import Message
 from .models import Admin
+from .forms import TaggingForm  
+from .models import User, Tag, UserTag
+
+
+
+
+
 
 
 def voice_bot(request):
@@ -462,20 +469,65 @@ def settings_view(request):
 
 
 
+# def tag_view(request):
+#     if request.method == 'POST':
+#         form = TaggingForm(request.POST)
+#         if form.is_valid():
+#             tag_name = form.cleaned_data['tag_name']
+#             users = form.cleaned_data['users']
+#             tag, created = Tag.objects.get_or_create(name=tag_name)
+#             for user in users:
+#                 UserTag.objects.get_or_create(user=user, tag=tag)
+#             return redirect('add_tag')
+#         else:
+#             print("Form errors:", form.errors)  # Place it here
+#     else:
+#         form = TaggingForm()
+
+#     tag_list = []
+#     if request.method == 'POST':
+#         form = TaggingForm(request.POST)
+#         if form.is_valid():
+#             tag_name = form.cleaned_data['tag_name']
+#             users = form.cleaned_data['users']
+#             tag, created = Tag.objects.get_or_create(name=tag_name)
+#             for user in users:
+#                 UserTag.objects.get_or_create(user=user, tag=tag)
+#             return redirect('add_tag')  # prevents resubmission on page refresh
+#     else:
+#         form = TaggingForm()
+
+#     tags = Tag.objects.all()
+#     for tag in tags:
+#         tagged_users = User.objects.filter(usertag__tag=tag)
+#         tag_list.append({'tag': tag, 'users': tagged_users})
+
+#     return render(request, 'contact/tag.html', {
+#         'form': form,
+#         'tag_list': tag_list,
+#     })
+
+from django.shortcuts import render, redirect
+from .forms import TaggingForm
+from .models import Tag, User, UserTag
+
 def tag_view(request):
-    tag_list = []
     if request.method == 'POST':
         form = TaggingForm(request.POST)
         if form.is_valid():
             tag_name = form.cleaned_data['tag_name']
             users = form.cleaned_data['users']
             tag, created = Tag.objects.get_or_create(name=tag_name)
+            UserTag.objects.filter(tag=tag).delete()
             for user in users:
                 UserTag.objects.get_or_create(user=user, tag=tag)
-            return redirect('add_tag')  # prevents resubmission on page refresh
+            return redirect('add_tag')  # URL name should match your urls.py
+        else:
+            print("Form errors:", form.errors)
     else:
         form = TaggingForm()
 
+    tag_list = []
     tags = Tag.objects.all()
     for tag in tags:
         tagged_users = User.objects.filter(usertag__tag=tag)
@@ -486,76 +538,77 @@ def tag_view(request):
         'tag_list': tag_list,
     })
 
-import json
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from django.views import View
-from .models import Admin
+
+# import json
+# from django.http import JsonResponse
+# from django.views.decorators.csrf import csrf_exempt
+# from django.contrib.auth.decorators import login_required
+# from django.utils.decorators import method_decorator
+# from django.views import View
+# from .models import Admin
 
 
-@method_decorator(login_required, name='dispatch')
-class ConnectGoogleCalendarView(View):
-    def post(self, request):
-        try:
-            data = json.loads(request.body)
-            calendar_id = data.get('calendar_id', '').strip()
-            if not calendar_id:
-                return JsonResponse({'msg': 'Calendar ID is required'}, status=400)
+# @method_decorator(login_required, name='dispatch')
+# class ConnectGoogleCalendarView(View):
+#     def post(self, request):
+#         try:
+#             data = json.loads(request.body)
+#             calendar_id = data.get('calendar_id', '').strip()
+#             if not calendar_id:
+#                 return JsonResponse({'msg': 'Calendar ID is required'}, status=400)
 
-            admin_id = request.session.get('admin_id')
-            if not admin_id:
-                return JsonResponse({'msg': 'Not authorized'}, status=403)
+#             admin_id = request.session.get('admin_id')
+#             if not admin_id:
+#                 return JsonResponse({'msg': 'Not authorized'}, status=403)
 
-            admin = Admin.objects.filter(id=admin_id).first()
-            if not admin:
-                return JsonResponse({'msg': 'Admin not found'}, status=404)
+#             admin = Admin.objects.filter(id=admin_id).first()
+#             if not admin:
+#                 return JsonResponse({'msg': 'Admin not found'}, status=404)
 
-            admin.google_calendar_id = calendar_id
-            admin.save(update_fields=['google_calendar_id'])
+#             admin.google_calendar_id = calendar_id
+#             admin.save(update_fields=['google_calendar_id'])
 
-            return JsonResponse({'msg': 'Google Calendar connected successfully'})
-        except Exception as e:
-            return JsonResponse({'msg': str(e)}, status=500)
-
-
-@method_decorator(login_required, name='dispatch')
-class DisconnectGoogleCalendarView(View):
-    def post(self, request):
-        try:
-            admin_id = request.session.get('admin_id')
-            if not admin_id:
-                return JsonResponse({'msg': 'Not authorized'}, status=403)
-
-            admin = Admin.objects.filter(id=admin_id).first()
-            if not admin:
-                return JsonResponse({'msg': 'Admin not found'}, status=404)
-
-            admin.google_calendar_id = ''
-            admin.save(update_fields=['google_calendar_id'])
-
-            return JsonResponse({'msg': 'Google Calendar disconnected'})
-        except Exception as e:
-            return JsonResponse({'msg': str(e)}, status=500)
+#             return JsonResponse({'msg': 'Google Calendar connected successfully'})
+#         except Exception as e:
+#             return JsonResponse({'msg': str(e)}, status=500)
 
 
-# In your existing settings_view or integration page view, add:
+# @method_decorator(login_required, name='dispatch')
+# class DisconnectGoogleCalendarView(View):
+#     def post(self, request):
+#         try:
+#             admin_id = request.session.get('admin_id')
+#             if not admin_id:
+#                 return JsonResponse({'msg': 'Not authorized'}, status=403)
 
-@login_required
-def integration_page(request):
-    admin_id = request.session.get('admin_id')
-    google_calendar_id = ''
-    google_calendar_connected = False
-    if admin_id:
-        admin = Admin.objects.filter(id=admin_id).first()
-        if admin and admin.google_calendar_id:
-            google_calendar_id = admin.google_calendar_id
-            google_calendar_connected = True
+#             admin = Admin.objects.filter(id=admin_id).first()
+#             if not admin:
+#                 return JsonResponse({'msg': 'Admin not found'}, status=404)
 
-    # Pass these to your integration template
-    return render(request, 'integration_channels.html', {
-        'google_calendar_id': google_calendar_id,
-        'google_calendar_connected': google_calendar_connected,
-        # Add other context variables as needed
-    })
+#             admin.google_calendar_id = ''
+#             admin.save(update_fields=['google_calendar_id'])
+
+#             return JsonResponse({'msg': 'Google Calendar disconnected'})
+#         except Exception as e:
+#             return JsonResponse({'msg': str(e)}, status=500)
+
+
+# # In your existing settings_view or integration page view, add:
+
+# @login_required
+# def integration_page(request):
+#     admin_id = request.session.get('admin_id')
+#     google_calendar_id = ''
+#     google_calendar_connected = False
+#     if admin_id:
+#         admin = Admin.objects.filter(id=admin_id).first()
+#         if admin and admin.google_calendar_id:
+#             google_calendar_id = admin.google_calendar_id
+#             google_calendar_connected = True
+
+#     # Pass these to your integration template
+#     return render(request, 'integration_channels.html', {
+#         'google_calendar_id': google_calendar_id,
+#         'google_calendar_connected': google_calendar_connected,
+#         # Add other context variables as needed
+#     })
