@@ -9,6 +9,10 @@ from newapp.controllers.contact import Contactcontroller
 from newapp.controllers.settings import Settingcontroller
 from newapp.controllers.whatsapp import whatsappcontroller
 from newapp.controllers.integration import Integrationcontroller
+from newapp.controllers.integration import Integrationcontroller
+
+
+
 
 
 urlpatterns = [
@@ -35,6 +39,9 @@ urlpatterns = [
     # integration
     path('setting/integration',Settingcontroller.integration,name='integration_view'),
     path('whatsapp_connect',whatsappcontroller.connect,name='whatsapp_connect'),
+    path('admin/connect_google_calendar/', Integrationcontroller.connect_google_calendar, name='connect_google_calendar'),
+    path('admin/disconnect_google_calendar/', Integrationcontroller.disconnect_google_calendar, name='disconnect_google_calendar'),
+
     
     
     # whatsapp

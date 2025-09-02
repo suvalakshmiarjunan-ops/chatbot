@@ -485,3 +485,77 @@ def tag_view(request):
         'form': form,
         'tag_list': tag_list,
     })
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.views import View
+from .models import Admin
+
+
+@method_decorator(login_required, name='dispatch')
+class ConnectGoogleCalendarView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            calendar_id = data.get('calendar_id', '').strip()
+            if not calendar_id:
+                return JsonResponse({'msg': 'Calendar ID is required'}, status=400)
+
+            admin_id = request.session.get('admin_id')
+            if not admin_id:
+                return JsonResponse({'msg': 'Not authorized'}, status=403)
+
+            admin = Admin.objects.filter(id=admin_id).first()
+            if not admin:
+                return JsonResponse({'msg': 'Admin not found'}, status=404)
+
+            admin.google_calendar_id = calendar_id
+            admin.save(update_fields=['google_calendar_id'])
+
+            return JsonResponse({'msg': 'Google Calendar connected successfully'})
+        except Exception as e:
+            return JsonResponse({'msg': str(e)}, status=500)
+
+
+@method_decorator(login_required, name='dispatch')
+class DisconnectGoogleCalendarView(View):
+    def post(self, request):
+        try:
+            admin_id = request.session.get('admin_id')
+            if not admin_id:
+                return JsonResponse({'msg': 'Not authorized'}, status=403)
+
+            admin = Admin.objects.filter(id=admin_id).first()
+            if not admin:
+                return JsonResponse({'msg': 'Admin not found'}, status=404)
+
+            admin.google_calendar_id = ''
+            admin.save(update_fields=['google_calendar_id'])
+
+            return JsonResponse({'msg': 'Google Calendar disconnected'})
+        except Exception as e:
+            return JsonResponse({'msg': str(e)}, status=500)
+
+
+# In your existing settings_view or integration page view, add:
+
+@login_required
+def integration_page(request):
+    admin_id = request.session.get('admin_id')
+    google_calendar_id = ''
+    google_calendar_connected = False
+    if admin_id:
+        admin = Admin.objects.filter(id=admin_id).first()
+        if admin and admin.google_calendar_id:
+            google_calendar_id = admin.google_calendar_id
+            google_calendar_connected = True
+
+    # Pass these to your integration template
+    return render(request, 'integration_channels.html', {
+        'google_calendar_id': google_calendar_id,
+        'google_calendar_connected': google_calendar_connected,
+        # Add other context variables as needed
+    })
