@@ -8,7 +8,7 @@ import requests
 from .models import User
 from datetime import datetime
 # from .models import Message
-# from pinecone_plugins.assistant.models.chat import Message as Pinemessage
+from pinecone_plugins.assistant.models.chat import Message as Pinemessage
 
 from django.http import JsonResponse
 from pinecone import Pinecone
@@ -16,18 +16,6 @@ from pinecone import Pinecone
 from django.utils import timezone
 from .models import Message
 from .models import Admin
-
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import Admin
-import openai
-from openai import OpenAI
-
-from django.shortcuts import render, redirect
-from .forms import TaggingForm
-from .models import Tag, User, UserTag
-
 
 
 def voice_bot(request):
@@ -417,10 +405,6 @@ def contacts_view(request):
 
 def settings_view(request):
     return render(request, 'settings.html')
-
-def integration_view(request):
-    # Render the integrations page template
-    return render(request, 'set/integration.html')
 
 # @csrf_exempt
 # def chatgpt_integration(request):
