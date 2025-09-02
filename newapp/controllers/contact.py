@@ -4,6 +4,7 @@ from ..models import User
 from ..models import Message
 from django.contrib import messages
 from newapp.models import Admin
+from datetime import datetime
 
 class Contactcontroller:
 
@@ -34,7 +35,8 @@ class Contactcontroller:
                 User.objects.create(
                     admin_id=admin_id,
                     name=name,
-                    phone_no=phone_no
+                    phone_no=phone_no,
+                    created_at=datetime.now()
                 )
                 messages.success(request,'successfully inserted')
                 return redirect(request.META.get("HTTP_REFERER", "contact/add"))

@@ -12,7 +12,7 @@ from newapp.models import Message
 from django.views.decorators.csrf import csrf_exempt
 import json
 from datetime import datetime
-
+from urllib.parse import urlencode
 
 class whatsappcontroller:
     @csrf_exempt
@@ -44,7 +44,7 @@ class whatsappcontroller:
                     return redirect(request.META.get('HTTP_REFERER', '/'))
                 messages.success(request, "whatsapp not connected")
                 return redirect(request.META.get('HTTP_REFERER', '/'))
-            # print(response_data)
+           
         except requests.exceptions.RequestException as e:
             messages.warning(request, "whatsapp error try again later")
             return redirect(request.META.get('HTTP_REFERER', '/'))
@@ -74,7 +74,7 @@ class whatsappcontroller:
             if request.method == 'POST':
                 # phone = request.POST.get('phone')
                 message = request.POST.get('message')
-                print(message)
+                
 
                 url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
                 headers = {
@@ -126,6 +126,7 @@ class whatsappcontroller:
 
                 except Exception as e:
                     error_message = f"❌ Exception occurred: {str(e)}"
+        exit
         return
 
 
@@ -143,8 +144,6 @@ class whatsappcontroller:
                 return HttpResponse(challenge, status=200)
             else:
                 return HttpResponse("Token verification failed", status=403)
-
-        # Process incoming message (POST request)
         if request.method == 'POST':
             try:
                 # Parse the incoming JSON data
@@ -164,16 +163,18 @@ class whatsappcontroller:
                 messages = value.get('messages', [])[0]
                 meta_data = value.get("metadata", {})
                 phone_number_id = meta_data.get('phone_number_id')
-
+                print(phone_number_id)
                 # Check for admin with the phone number ID
                 admin_check = Admin.objects.filter(whatsapp_phone_id=phone_number_id).first()
                 if not admin_check:
+                    # print('enter')
                     return HttpResponse("Admin not found", status=404)
-
+                # print('exit')
                 # Extract message content and phone number
                 phone = messages.get('from')  # WhatsApp number
                 msg_text = messages.get('text', {}).get('body')
-
+                if msg_text =='':
+                    return
                 # Find or create a user
                 existing_user = User.objects.filter(phone_no=phone).first()
                 if not existing_user:
@@ -185,7 +186,6 @@ class whatsappcontroller:
                         created_at=datetime.now()  # Ensure timezone-aware datetime
                     )
                     print(f"✅ New user created: {existing_user.id}")
-
                 # Store the received message in the database
                 Message.objects.create(
                     user_id=existing_user,
@@ -193,16 +193,44 @@ class whatsappcontroller:
                     created_at=datetime.now(),  # Ensure timezone-aware datetime
                     who='human'
                 )
+              
+                trigger=False
+                if admin_check.goolgle_calendar !='':
+                        if any(word in msg_text.lower() for word in ['book', 'appointment']):
+                            admin_id=admin_check.id
+                            payload = {"msg_text": msg_text.lower(),'admin_id':admin_id,'user_id':existing_user.id}
+                            try:
+                                send_request = requests.post(
+                                    "https://9c7103ad27de.ngrok-free.app/send_trigger/",
+                                    data=payload,
+                                    timeout=10
+                                )
+                                send_request.raise_for_status()          # raise if 4xx/5xx
+                                resp = send_request.json()  
+                                # <-- correct variable
+                                print('trigger fired')
+                                bot_response=resp.get("url")
+                                trigger=True
+                                # If this is a Django view, return a JsonResponse to your client:
+                                
+                            except requests.RequestException as e:
+            # network / HTTP errors
+                                return JsonResponse({"status": False, "error": str(e)}, status=502)
+                   
 
+
+
+                # if Admin
                 # Use Pinecone to get the bot's response
-                pc = Pinecone(api_key=admin_check.pinecone_token)
-                assistant = pc.assistant.Assistant(assistant_name="yahi")
-                msg = Pinemessage(content=msg_text)
-                resp = assistant.chat(messages=[msg])
+                if trigger==False:
+                    pc = Pinecone(api_key=admin_check.pinecone_token)
+                    assistant = pc.assistant.Assistant(assistant_name="yahi")
+                    msg = Pinemessage(content=msg_text)
+                    resp = assistant.chat(messages=[msg])
 
-                # Extract the bot's response
-                bot_response = resp["message"]["content"]  # content
-                print(bot_response)
+                    # Extract the bot's response
+                    bot_response = resp["message"]["content"]  # content
+                    print(bot_response)
 
                 # Send the bot's response back via WhatsApp
                 payload = {
@@ -210,16 +238,33 @@ class whatsappcontroller:
                     "message": bot_response,
                     "phone_number_id": phone_number_id
                 }
-                response = requests.post("https://5da140393034.ngrok-free.app/send_whatsapp_message/", data=payload)
+                response = requests.post("https://9c7103ad27de.ngrok-free.app/send_whatsapp_message/", data=payload)
                 admin_check=None
+                exit
                 return HttpResponse("Message stored", status=200)
+                
 
             except Exception as e:
                 # Catch any errors and return an appropriate message
                 print(f"Webhook Error: {str(e)}")
                 return HttpResponse(f"Error: {str(e)}", status=400)
-            return
+        exit
         return
+    @csrf_exempt
+    def send_trigger(request):
+        admin_id=request.POST.get('admin_id') or ''
+        user_id=request.POST.get('user_id') or ''
+        if user_id=='' or admin_id =='':
+            return JsonResponse({'status':False})
+        origin = request.build_absolute_uri('/')[:-1]
+        # qs=urlencode({'admin_id':admin_id,'user_id':user_id})
+        return JsonResponse({
+            'status':True,
+            'url':f"{origin}/appointment_date/?admin_id={admin_id}&&user_id={user_id}&&calendar_id=aravindkumarpro012@gmail.com"
+        })
+        # return None
+    def appointment_date(request):
+        return render(request,'calendar/form.html')
     
     def disconnect(request):
         

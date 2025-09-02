@@ -10,6 +10,7 @@ class Admin(models.Model):
     # openai_api_key = models.TextField()  # New field to store API key
     created_at=models.DateTimeField(auto_now_add=True)
     display_phone_no=models.TextField()
+    goolgle_calendar=models.TextField()
     
     
     class Meta:
