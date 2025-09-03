@@ -7,10 +7,10 @@
 
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <!-- Font Awesome (optional) -->
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 
-  <!-- (Optional) put CSRF into a meta tag if you prefer grabbing it from DOM -->
+  <!-- CSRF Token -->
   <meta name="csrf-token" content="{{ csrf_token }}">
 
   <style>
@@ -64,7 +64,7 @@
       <h5 class="mb-4">Settings &gt; <b>Integration</b></h5>
 
       <div class="d-grid gap-3">
-        <!-- Pinecone -->
+        <!-- Pinecone (unchanged, existing code) -->
         {% if pinecone_connected %}
           <a href="javascript:void(0)" class="text-decoration-none text-reset" id="disconnect">
         {% else %}
@@ -89,8 +89,12 @@
           </div>
         </a>
 
-        <!-- ChatGPT (placeholder) -->
-        <a href="#" class="text-decoration-none text-reset">
+        <!-- ChatGPT Card (new) -->
+        {% if chatgpt_connected %}
+          <a href="javascript:void(0)" class="text-decoration-none text-reset" id="chatgptDisconnectLink">
+        {% else %}
+          <a href="javascript:void(0)" class="text-decoration-none text-reset" id="chatgptConnectLink">
+        {% endif %}
           <div class="channel-card">
             <div class="d-flex align-items-center gap-3">
               <div class="icon-box icon-chatgpt">
@@ -101,13 +105,18 @@
               <div class="fw-semibold">ChatGPT</div>
             </div>
             <span class="text-muted">&rsaquo;</span>
+            {% if chatgpt_connected %}
+              <i class="fa-solid fa-circle-check text-success ms-1" title="connected" aria-label="connected"></i>
+            {% else %}
+              <i class="fa-solid fa-circle-xmark text-danger ms-1" title="not connected" aria-label="not connected"></i>
+            {% endif %}
           </div>
         </a>
       </div>
     </div>
   </main>
 
-  <!-- Pinecone Modal -->
+  <!-- Pinecone Modal (unchanged) -->
   <div class="modal fade" id="pineconeModal" tabindex="-1" aria-labelledby="pineconeModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -115,7 +124,6 @@
           <h5 class="modal-title" id="pineconeModalLabel">Pinecone Integration</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-
         <div class="modal-body">
           {% if pinecone_connected %}
             <p>Pinecone is currently <b>connected</b>. Do you want to disconnect?</p>
@@ -128,7 +136,6 @@
           {% endif %}
           <div id="pineconeAlert" class="alert d-none" role="alert"></div>
         </div>
-
         <div class="modal-footer">
           {% if pinecone_connected %}
             <button type="button" class="btn btn-danger" id="confirmDisconnect">Disconnect</button>
@@ -141,11 +148,44 @@
     </div>
   </div>
 
-  <!-- Bootstrap 5 JS (bundle includes Popper) -->
+  <!-- ChatGPT Modal (new) -->
+  <div class="modal fade" id="chatgptModal" tabindex="-1" aria-labelledby="chatgptModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="chatgptModalLabel">ChatGPT Integration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {% if chatgpt_connected %}
+            <p>ChatGPT is currently <b>connected</b>. Do you want to disconnect?</p>
+          {% else %}
+            <div class="mb-3">
+              <label for="chatgptKey" class="form-label">OpenAI API Key</label>
+              <input type="text" id="chatgptKey" class="form-control" placeholder="Enter OpenAI API Key" />
+              <div class="form-text">We'll store this securely to enable ChatGPT features.</div>
+            </div>
+          {% endif %}
+          <div id="chatgptAlert" class="alert d-none" role="alert"></div>
+        </div>
+        <div class="modal-footer">
+          {% if chatgpt_connected %}
+            <button type="button" class="btn btn-danger" id="confirmChatGPTDisconnect">Disconnect</button>
+            <button type="button" class="btn btn-primary" id="goToPromptPage">Enter Prompt</button>
+          {% else %}
+            <button type="button" class="btn btn-success" id="confirmChatGPTConnect">Connect</button>
+          {% endif %}
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS bundle (includes Popper) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    // --- CSRF helper for Django POST ---
+    // CSRF helper function (unchanged)
     function getCookie(name) {
       const value = `; ${document.cookie}`;
       const parts = value.split(`; ${name}=`);
@@ -156,11 +196,10 @@
     const csrfFromMeta = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const CSRF_TOKEN = csrfFromCookie || csrfFromMeta || '';
 
-    // Modal instance
+    // Pinecone modal handlers (unchanged)
     const pineconeModalEl = document.getElementById('pineconeModal');
     const pineconeModal = new bootstrap.Modal(pineconeModalEl);
 
-    // Card triggers
     const disconnectLink = document.getElementById('disconnect');
     const connectLink = document.getElementById('connect');
 
@@ -177,26 +216,24 @@
       });
     }
 
-    // Alert helper
-    function showAlert(message, type = 'info') {
-      const alertEl = document.getElementById('pineconeAlert');
+    function showAlert(message, type = 'info', alertId = 'pineconeAlert') {
+      const alertEl = document.getElementById(alertId);
       alertEl.className = `alert alert-${type}`;
       alertEl.textContent = message;
       alertEl.classList.remove('d-none');
     }
-    function clearAlert() {
-      const alertEl = document.getElementById('pineconeAlert');
+    function clearAlert(alertId = 'pineconeAlert') {
+      const alertEl = document.getElementById(alertId);
       alertEl.classList.add('d-none');
       alertEl.textContent = '';
     }
 
-    // Disconnect handler
     const confirmDisconnectBtn = document.getElementById('confirmDisconnect');
     if (confirmDisconnectBtn) {
       confirmDisconnectBtn.addEventListener('click', async () => {
         clearAlert();
         try {
-          const res = await fetch('{% url "dissconnect" %}', { method: 'GET' });
+          const res = await fetch('{% url "disconnect" %}', { method: 'GET' });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const data = await res.json();
           showAlert(data?.msg || 'Disconnected', 'success');
@@ -207,7 +244,6 @@
       });
     }
 
-    // Connect handler
     const confirmConnectBtn = document.getElementById('confirmConnect');
     if (confirmConnectBtn) {
       confirmConnectBtn.addEventListener('click', async () => {
@@ -219,21 +255,110 @@
           return;
         }
         try {
-          const origin=window.location.origin+'/connect_pinecone_token/'
-          console.log(origin)
-            const res = await fetch(origin, {
+          const origin = window.location.origin + '/connect_pinecone_token/';
+          const res = await fetch(origin, {
             method: 'POST',
-            body: JSON.stringify({ api_key: apiKey })
+            body: JSON.stringify({ api_key: apiKey }),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': CSRF_TOKEN
+            }
           });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const data = await res.json();
-          console.log(data)
-          showAlert(data?.msg || 'Connected', 'success',);
+          showAlert(data?.msg || 'Connected', 'success');
           setTimeout(() => window.location.reload(), 600);
         } catch (err) {
           showAlert('Failed to connect. ' + err.message, 'danger');
         }
       });
+    }
+
+    // ChatGPT modal handlers
+    const chatgptModalEl = document.getElementById('chatgptModal');
+    const chatgptModal = new bootstrap.Modal(chatgptModalEl);
+
+    const chatgptConnectLink = document.getElementById('chatgptConnectLink');
+    if (chatgptConnectLink) {
+      chatgptConnectLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        chatgptModal.show();
+      });
+    }
+
+    const chatgptDisconnectLink = document.getElementById('chatgptDisconnectLink');
+    if (chatgptDisconnectLink) {
+      chatgptDisconnectLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        chatgptModal.show();
+      });
+    }
+
+    const confirmChatGPTConnectBtn = document.getElementById('confirmChatGPTConnect');
+    if (confirmChatGPTConnectBtn) {
+      confirmChatGPTConnectBtn.addEventListener('click', async () => {
+        clearAlert('chatgptAlert');
+        const apiKey = document.getElementById('chatgptKey').value.trim();
+        if (!apiKey) {
+          showAlert('Please enter an API key.', 'warning', 'chatgptAlert');
+          return;
+        }
+        try {
+          const res = await fetch('/connect_openai_key/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({ api_key: apiKey })
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          showAlert(data?.msg || 'Connected', 'success', 'chatgptAlert');
+          setTimeout(() => window.location.reload(), 600);
+        } catch (err) {
+          showAlert('Failed to connect. ' + err.message, 'danger', 'chatgptAlert');
+        }
+      });
+    }
+
+    const confirmChatGPTDisconnectBtn = document.getElementById('confirmChatGPTDisconnect');
+    if (confirmChatGPTDisconnectBtn) {
+      confirmChatGPTDisconnectBtn.addEventListener('click', async () => {
+        clearAlert('chatgptAlert');
+        try {
+          const res = await fetch('/disconnect_openai_key/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN }
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          showAlert(data?.msg || 'Disconnected', 'success', 'chatgptAlert');
+          setTimeout(() => window.location.reload(), 600);
+        } catch (err) {
+          showAlert('Failed to disconnect. ' + err.message, 'danger', 'chatgptAlert');
+        }
+      });
+    }
+
+    const goToPromptPageBtn = document.getElementById('goToPromptPage');
+    if (goToPromptPageBtn) {
+      goToPromptPageBtn.addEventListener('click', () => {
+        window.location.href = '/chatgpt_prompt/';
+      });
+    }
+
+    function showAlert(message, type = 'info', alertId = 'chatgptAlert') {
+      const alertEl = document.getElementById(alertId);
+      alertEl.className = `alert alert-${type}`;
+      alertEl.textContent = message;
+      alertEl.classList.remove('d-none');
+    }
+
+    function clearAlert(alertId = 'chatgptAlert') {
+      const alertEl = document.getElementById(alertId);
+      alertEl.classList.add('d-none');
+      alertEl.textContent = '';
     }
   </script>
 </body>

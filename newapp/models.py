@@ -9,7 +9,8 @@ class Admin(models.Model):
     pinecone_token=models.TextField()
     created_at=models.DateTimeField(auto_now_add=True)
     display_phone_no=models.TextField()
-    # goolgle_calendar=models.TextField()
+    goolgle_calendar=models.TextField()
+    openai_api_key = models.TextField(blank=True, null=True)
     
     
     class Meta:
@@ -81,3 +82,9 @@ class UserTag(models.Model):
 #     def __str__(self):
 #         return f"{self.name} ({self.phone_no})"
      
+class ChatGPTPrompt(models.Model):
+    prompt_text = models.TextField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"ChatGPT Prompt (updated {self.updated_at})"

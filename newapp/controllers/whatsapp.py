@@ -13,6 +13,11 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from datetime import datetime
 from urllib.parse import urlencode
+from django.utils import timezone
+import openai
+from newapp.models import ChatGPTPrompt
+
+
 
 class whatsappcontroller:
     @csrf_exempt
@@ -54,202 +59,320 @@ class whatsappcontroller:
 
     @csrf_exempt
     def send_whatsapp_message(request):
-        end=True
-        if end is True:
-            phone_number_id=request.POST.get('phone_number_id')
-            
-            
-            response_data = None
-            success_message = None
-            error_message = None
-            phone = request.POST.get('phone') or ''
-            if (phone == ''):
-                return
-            
-            token = Admin.objects.filter(whatsapp_phone_id=phone_number_id).values_list('whatsapp_token', flat=True).first()
-            if token is None or token =='':
-                return
-          
+        if request.method != 'POST':
+            return JsonResponse({"error": "Method not allowed"}, status=405)
 
-            if request.method == 'POST':
-                # phone = request.POST.get('phone')
-                message = request.POST.get('message')
-                
+        phone_number_id = (request.POST.get('phone_number_id') or '').strip()
+        phone = (request.POST.get('phone') or '').strip()
+        message = (request.POST.get('message') or '').strip()
 
-                url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
-                headers = {
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json"
-                }
-                payload = {
-                    "messaging_product": "whatsapp",
-                    "to": phone,
-                    "type": "text",
-                    "text": {
-                        "body": message
-                    }
-                }
-                try:
-                    res = requests.post(url, json=payload, headers=headers)
-                    response_data = res.json()
-                    end=False
+        if not phone:
+            return JsonResponse({"error": "Phone number missing"}, status=400)
 
-                    if res.status_code == 200 and "messages" in response_data:
-                        success_message = "✅ Message sent successfully!"
-                        existing_user = User.objects.filter(phone_no=phone).first()
-                        if not existing_user:
-                            new_user = User.objects.create(
-                                name='bot',
-                                phone_no=phone,
-                                created_at=datetime.now()
-                            )
-                            user_id = new_user.id
-                            print(f"id:{user_id}")
-                        else:
-                            user_id = existing_user.id
-                            print(f"User already exist ID:{user_id}")
-                        if user_id is not None:
-                            user_instance = User.objects.get(id=user_id)
-                            new_message = Message.objects.create(
-                                user_id=user_instance,
-                                messages=message,
-                                created_at=datetime.now(),
-                                who='bot'
-                            )
-                            print(f"successfully")
-                        else:
-                            print('sorry')
-                    else:
-                        error_detail = response_data.get(
-                            "error", {}).get("message", "Unknown error")
-                        error_message = f"❌ Failed to send message: {error_detail}"
+        token = Admin.objects.filter(whatsapp_phone_id=phone_number_id)\
+                            .values_list('whatsapp_token', flat=True).first()
+        if not token:
+            return JsonResponse({"error": "WhatsApp token missing"}, status=400)
 
-                except Exception as e:
-                    error_message = f"❌ Exception occurred: {str(e)}"
-        exit
-        return
+        url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": phone,
+            "type": "text",
+            "text": {"body": message}
+        }
 
+        try:
+            res = requests.post(url, json=payload, headers=headers, timeout=20)
+            try:
+                data = res.json()
+            except Exception:
+                data = {"raw_text": res.text}
+
+            if res.status_code == 200 and "messages" in data:
+                # persist bot message (uses timezone.now)
+                user = User.objects.filter(phone_no=phone).first()
+                if not user:
+                    user = User.objects.create(name='bot', phone_no=phone, created_at=timezone.now())
+                Message.objects.create(user_id=user, messages=message, created_at=timezone.now(), who='bot')
+                return JsonResponse({"ok": True, "provider_response": data}, status=200)
+            else:
+                err = (data.get("error") or {}).get("message") or data
+                return JsonResponse({"ok": False, "provider_response": err}, status=502)
+
+        except Exception as e:
+            return JsonResponse({"ok": False, "exception": str(e)}, status=500)
+
+    
+    # @csrf_exempt
+    # def send_whatsapp_message(request):
+    #     if request.method == 'GET':
+    #         # Render the send message form on GET requests
+    #         return render(request, 'send_message.html')
+
+    #     elif request.method == 'POST':
+    #         phone_number_id = request.POST.get('phone_number_id', '')
+    #         phone = request.POST.get('phone', '')
+    #         message = request.POST.get('message', '')
+
+    #         if phone == '':
+    #             return HttpResponse("Phone number missing", status=400)
+
+    #         token = Admin.objects.filter(whatsapp_phone_id=phone_number_id).values_list('whatsapp_token', flat=True).first()
+    #         if token is None or token == '':
+    #             return HttpResponse("WhatsApp token missing", status=400)
+
+    #         response_data = None
+    #         success_message = None
+    #         error_message = None
+
+    #         url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
+    #         headers = {
+    #             "Authorization": f"Bearer {token}",
+    #             "Content-Type": "application/json"
+    #         }
+    #         payload = {
+    #             "messaging_product": "whatsapp",
+    #             "to": phone,
+    #             "type": "text",
+    #             "text": {"body": message}
+    #         }
+
+    #         try:
+    #             res = requests.post(url, json=payload, headers=headers)
+    #             response_data = res.json()
+
+    #             if res.status_code == 200 and "messages" in response_data:
+    #                 success_message = "✅ Message sent successfully!"
+    #                 existing_user = User.objects.filter(phone_no=phone).first()
+    #                 if not existing_user:
+    #                     new_user = User.objects.create(
+    #                         name='bot',
+    #                         phone_no=phone,
+    #                         created_at=datetime.now()
+    #                     )
+    #                     user_id = new_user.id
+    #                 else:
+    #                     user_id = existing_user.id
+
+    #                 user_instance = User.objects.get(id=user_id)
+    #                 Message.objects.create(
+    #                     user_id=user_instance,
+    #                     messages=message,
+    #                     created_at=datetime.now(),
+    #                     who='bot'
+    #                 )
+    #             else:
+    #                 error_detail = response_data.get("error", {}).get("message", "Unknown error")
+    #                 error_message = f"❌ Failed to send message: {error_detail}"
+
+    #         except Exception as e:
+    #             error_message = f"❌ Exception occurred: {str(e)}"
+
+    #         return render(request, 'send_message.html', {
+    #             'response': response_data,
+    #             'success_message': success_message,
+    #             'error_message': error_message,
+    #             'phone_number_id': phone_number_id,
+    #             'phone': phone,
+    #             'message': message
+    #         })
+
+    #     else:
+    #         return HttpResponse("Method not allowed", status=405)
 
     @csrf_exempt
     def get_message(request):
         VERIFY_TOKEN = "speeed"
-        
-        # Token verification (GET request)
+
+        # Webhook verification
         if request.method == 'GET':
             mode = request.GET.get('hub.mode')
             token = request.GET.get('hub.verify_token')
             challenge = request.GET.get('hub.challenge')
-
             if mode == 'subscribe' and token == VERIFY_TOKEN:
                 return HttpResponse(challenge, status=200)
-            else:
-                return HttpResponse("Token verification failed", status=403)
+            return HttpResponse("Token verification failed", status=403)
+
+        # Webhook delivery
         if request.method == 'POST':
             try:
-                # Parse the incoming JSON data
-                data = json.loads(request.body)
-                
-                # Check if 'entry' exists and has data
-                entries = data.get('entry', [])
+                data = json.loads(request.body.decode("utf-8"))
+
+                entries = data.get('entry') or []
                 if not entries:
-                    return HttpResponse("No entries found", status=400)
+                    return HttpResponse("OK", status=200)  # ack silently
 
-                # Extract the first entry and its changes
-                entry = entries[0]
-                changes = entry.get('changes', [])[0]
-                value = changes.get('value', {})
+                for entry in entries:
+                    changes = entry.get('changes') or []
+                    for change in changes:
+                        value = change.get('value') or {}
+                        metadata = value.get("metadata") or {}
+                        phone_number_id = metadata.get('phone_number_id')
 
-                # Extract relevant information
-                messages = value.get('messages', [])[0]
-                meta_data = value.get("metadata", {})
-                phone_number_id = meta_data.get('phone_number_id')
-                print(phone_number_id)
-                # Check for admin with the phone number ID
-                admin_check = Admin.objects.filter(whatsapp_phone_id=phone_number_id).first()
-                if not admin_check:
-                    # print('enter')
-                    return HttpResponse("Admin not found", status=404)
-                # print('exit')
-                # Extract message content and phone number
-                phone = messages.get('from')  # WhatsApp number
-                msg_text = messages.get('text', {}).get('body')
-                if msg_text =='':
-                    return
-                # Find or create a user
-                existing_user = User.objects.filter(phone_no=phone).first()
-                if not existing_user:
-                    admin_oid = Admin.objects.get(id=admin_check.id)
-                    existing_user = User.objects.create(
-                        name='user',
-                        admin_id=admin_oid,
-                        phone_no=phone,
-                        created_at=datetime.now()  # Ensure timezone-aware datetime
-                    )
-                    print(f"✅ New user created: {existing_user.id}")
-                # Store the received message in the database
-                Message.objects.create(
-                    user_id=existing_user,
-                    messages=msg_text,
-                    created_at=datetime.now(),  # Ensure timezone-aware datetime
-                    who='human'
-                )
-              
-                trigger=False
-                if admin_check.goolgle_calendar !='':
-                        if any(word in msg_text.lower() for word in ['book', 'appointment']):
-                            admin_id=admin_check.id
-                            payload = {"msg_text": msg_text.lower(),'admin_id':admin_id,'user_id':existing_user.id}
-                            try:
-                                send_request = requests.post(
-                                    "https://9c7103ad27de.ngrok-free.app/send_trigger/",
-                                    data=payload,
-                                    timeout=10
+                        # Make sure we have an Admin for this number
+                        admin_check = Admin.objects.filter(whatsapp_phone_id=phone_number_id).first()
+                        if not admin_check:
+                            continue  # ack but skip
+
+                        # messages/statuses may be absent
+                        for m in value.get('messages') or []:
+                            if m.get('type') != 'text':
+                                continue
+
+                            phone = m.get('from')
+                            msg_text = (m.get('text') or {}).get('body') or ""
+                            if not msg_text.strip():
+                                continue
+
+                            # upsert user
+                            existing_user = User.objects.filter(phone_no=phone).first()
+                            if not existing_user:
+                                existing_user = User.objects.create(
+                                    name='user',
+                                    admin_id=Admin.objects.get(id=admin_check.id),
+                                    phone_no=phone,
+                                    created_at=datetime.now(),
                                 )
-                                send_request.raise_for_status()          # raise if 4xx/5xx
-                                resp = send_request.json()  
-                                # <-- correct variable
-                                print('trigger fired')
-                                bot_response=resp.get("url")
-                                trigger=True
-                                # If this is a Django view, return a JsonResponse to your client:
-                                
+
+                            # save human message
+                            try:
+                                Message.objects.create(
+                                    user_id=existing_user,
+                                    messages=msg_text,
+                                    created_at=datetime.now(),
+                                    who='human'
+                                )
+                            except Exception as db_in_e:
+                                print(f"DB inbound error: {db_in_e}")
+
+                            # Trigger link?
+                            bot_response = None
+                            trigger = False
+                            try:
+                                if getattr(admin_check, "goolgle_calendar", "") != "":
+                                    if any(word in msg_text.lower() for word in ['book', 'appointment']):
+                                        payload = {"msg_text": msg_text.lower(), 'admin_id': admin_check.id, 'user_id': existing_user.id}
+                                        send_request = requests.post(
+                                            "https://2b526918e9a1.ngrok-free.app/send_trigger/",
+                                            data=payload,
+                                            timeout=10
+                                        )
+                                        send_request.raise_for_status()
+                                        resp = send_request.json()
+                                        bot_response = resp.get("url")
+                                        trigger = True
                             except requests.RequestException as e:
-            # network / HTTP errors
-                                return JsonResponse({"status": False, "error": str(e)}, status=502)
-                   
+                                # non-fatal; we’ll fallback to NL response
+                                print(f"trigger error: {e}")
 
+                            # If not trigger: Pinecone -> ChatGPT fallback
+                            if not trigger:
+                                # 1) Try Pinecone only if token exists
+                                try:
+                                    pine_token = getattr(admin_check, "pinecone_token", "") or ""
+                                    if pine_token:
+                                        pc = Pinecone(api_key=pine_token)
+                                        assistant = pc.assistant.Assistant(assistant_name="yahi")
+                                        pmsg = Pinemessage(content=msg_text)
+                                        resp = assistant.chat(messages=[pmsg])
+                                        bot_response = (resp or {}).get("message", {}).get("content")
+                                except Exception as pe:
+                                    print(f"Pinecone error: {pe}")
 
+                                # 2) Fallback to ChatGPT if bot_response missing
+                                # ---------------- LLM reply (ChatGPT first) ----------------
+                                if not trigger:
+                                    bot_response = None
 
-                # if Admin
-                # Use Pinecone to get the bot's response
-                if trigger==False:
-                    pc = Pinecone(api_key=admin_check.pinecone_token)
-                    assistant = pc.assistant.Assistant(assistant_name="yahi")
-                    msg = Pinemessage(content=msg_text)
-                    resp = assistant.chat(messages=[msg])
+                                    openai_key = (getattr(admin_check, "openai_api_key", "") or "").strip()
+                                    pine_token = (getattr(admin_check, "pinecone_token", "") or "").strip()
 
-                    # Extract the bot's response
-                    bot_response = resp["message"]["content"]  # content
-                    print(bot_response)
+                                    if openai_key:
+                                        # ChatGPT path – uses your /chatgpt_prompt/ text as SYSTEM
+                                        try:
+                                            openai.api_key = openai_key
 
-                # Send the bot's response back via WhatsApp
-                payload = {
-                    "phone": phone,
-                    "message": bot_response,
-                    "phone_number_id": phone_number_id
-                }
-                response = requests.post("https://9c7103ad27de.ngrok-free.app/send_whatsapp_message/", data=payload)
-                admin_check=None
-                exit
+                                            prompt_obj = ChatGPTPrompt.objects.first()
+                                            system_prompt = (prompt_obj.prompt_text or "").strip() if prompt_obj else ""
+                                            if not system_prompt:
+                                                system_prompt = (
+                                                    "Follow the owner's configured instructions exactly. "
+                                                    "If no instructions are configured, reply: 'Prompt not configured.'"
+                                                )
+
+                                            resp = openai.ChatCompletion.create(
+                                                # openai==0.28.1 interface
+                                                model="gpt-3.5-turbo",  # or "gpt-4" if your key has access
+                                                messages=[
+                                                    {"role": "system", "content": system_prompt},
+                                                    {"role": "user", "content": msg_text},
+                                                ],
+                                                timeout=15,
+                                            )
+                                            bot_response = resp.choices[0].message.content.strip()
+                                            print("[LLM] ChatGPT used")
+                                        except Exception as oe:
+                                            print(f"[LLM] OpenAI error: {oe}")
+                                            bot_response = "Sorry, I couldn’t generate a response just now."
+
+                                    elif pine_token:
+                                        # Pinecone path – ONLY if ChatGPT isn’t configured
+                                        try:
+                                            pc = Pinecone(api_key=pine_token)
+                                            assistant = pc.assistant.Assistant(assistant_name="yahi")
+                                            pmsg = Pinemessage(content=msg_text)
+                                            presp = assistant.chat(messages=[pmsg])
+                                            bot_response = (presp or {}).get("message", {}).get("content")
+                                            print("[LLM] Pinecone used")
+                                        except Exception as pe:
+                                            print(f"[LLM] Pinecone error: {pe}")
+                                            bot_response = "Sorry, I couldn’t generate a response just now."
+                                    else:
+                                        bot_response = "Sorry, my assistant is offline right now."
+
+                                    if not bot_response:
+                                        bot_response = "Got it!"
+                                # ---------------- /LLM reply ----------------
+
+                            # Send back via your sender endpoint
+                            payload = {
+                                "phone": phone,
+                                "message": bot_response,
+                                "phone_number_id": phone_number_id
+                            }
+                            try:
+                                r = requests.post(
+                                    "https://2b526918e9a1.ngrok-free.app/send_whatsapp_message/",
+                                    data=payload,
+                                    timeout=15
+                                )
+                                if r.status_code != 200:
+                                    print(f"WA send error {r.status_code}: {r.text}")
+                            except Exception as se:
+                                print(f"WA send exception: {se}")
+
+                            # Save bot reply
+                            try:
+                                Message.objects.create(
+                                    user_id=existing_user,
+                                    messages=bot_response,
+                                    created_at=datetime.now(),
+                                    who='bot'
+                                )
+                            except Exception as db_out_e:
+                                print(f"DB bot save error: {db_out_e}")
+
                 return HttpResponse("Message stored", status=200)
-                
 
             except Exception as e:
-                # Catch any errors and return an appropriate message
                 print(f"Webhook Error: {str(e)}")
-                return HttpResponse(f"Error: {str(e)}", status=400)
-        exit
-        return
+                # return 200 so WA doesn't retry aggressively
+                return HttpResponse("OK", status=200)
+
+        # not GET/POST
+        return HttpResponse("Method not allowed", status=405)
     @csrf_exempt
     def send_trigger(request):
         admin_id=request.POST.get('admin_id') or ''

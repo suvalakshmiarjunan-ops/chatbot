@@ -5,6 +5,11 @@ from ..models import Message
 from django.contrib import messages
 from newapp.models import Admin
 from datetime import datetime
+from django.shortcuts import get_object_or_404
+from newapp.forms import UserForm
+from django.views.decorators.csrf import csrf_exempt
+
+
 
 class Contactcontroller:
 
@@ -23,6 +28,7 @@ class Contactcontroller:
     def add_user(request):
         return render(request,'contact/add_user.html')
     
+    @csrf_exempt
     def add_admin_user(request):
         # return HttpResponse('hi')
         if(request.method=='POST'):
@@ -45,5 +51,26 @@ class Contactcontroller:
                  return redirect(request.META.get("HTTP_REFERER", "contact/add"))
         else:
             return HttpResponse('not correct method')
-        
-        
+    
+    def edit_user(request, id):
+        user = get_object_or_404(User, id=id)
+        if request.method == 'POST':
+            form = UserForm(request.POST, instance=user)
+            if form.is_valid():
+                form.save()
+                return redirect('show_people')  # Adjust to your user list view
+        else:
+            form = UserForm(instance=user)
+        return render(request, 'contact/edit_user.html', {'form': form, 'user': user})
+
+    def delete_user(request, id):
+        user = get_object_or_404(User, id=id)
+
+    # Delete related conversations first to avoid foreign key errors
+        user.message_set.all().delete()
+
+    # Delete the user
+        user.delete()
+
+    # Redirect to user listing page
+        return redirect('show_people')  # replace 'show_people' with your actual user listing url name

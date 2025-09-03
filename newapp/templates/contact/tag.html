@@ -1,35 +1,54 @@
 {% extends 'layouts/base.html' %}
-
-{% block title %}Add Tag - Speedbots{% endblock %}
 {% load static %}
 
+{% block title %}Add Tag - Speedbots{% endblock %}
+
+{% block extra_head %}
+{% endblock %}
+
 {% block content %}
-<div class="main" style="padding:24px 32px; max-width:900px;">
+<div class="main" style="padding:24px 0 24px 0; max-width:1200px; margin-left:0;">
+
+  <script>
+    function toggleTag(tagId) {
+      var userRow = document.getElementById('users-' + tagId);
+      var arrow = document.getElementById('arrow-' + tagId);
+      if (!userRow || !arrow) return;
+
+      if (userRow.style.display === 'none' || userRow.style.display === '') {
+        userRow.style.display = 'table-row';
+        arrow.innerHTML = '&#x25B2;'; // Up arrow ▲
+      } else {
+        userRow.style.display = 'none';
+        arrow.innerHTML = '&#x25BC;'; // Down arrow ▼
+      }
+    }
+  </script>
+
   <div style="display:flex; align-items:center; justify-content:space-between;">
-    <h1 style="margin-bottom:0;">Add Tag</h1>
-    <!-- Button to open modal -->
+    <h1 style="margin-bottom:0; font-size:2rem;">Add/Edit Tag</h1>
     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTagModal">
-      Add Tag
+      Add/Edit Tag
     </button>
   </div>
   <hr>
-  <h2>Tags and Assigned Users</h2>
-  <table class="table table-hover" style="background:#fff; margin:auto;">
+  <h2 style="font-size:1.3rem;">Tags and Assigned Users</h2>
+  <table class="table table-hover" style="background:#fff; width:100%; max-width:1200px; margin-left:0;">
     <thead>
       <tr>
-        <th style="width:40px"></th>
-        <th>Name</th>
-        <th>Contacts</th>
-        <th style="width:40px"></th>
+        <th style="width:40px;"></th>
+        <th style="min-width:240px; padding-left:36px;">Name</th>
+        <th style="min-width:120px; padding-left:36px;">Contacts</th>
+        <th style="width:40px;"></th>
       </tr>
     </thead>
     <tbody>
       {% for entry in tag_list %}
-      <tr class="tag-row" tabindex="0" onclick="toggleTag('{{ entry.tag.id }}')" style="cursor:pointer;">
-        <td><input type="checkbox" disabled></td>
-        <td>{{ entry.tag.name }}</td>
-        <td>{{ entry.users|length }}</td>
-        <td><span id="arrow-{{ entry.tag.id }}" class="arrow">&#x25BC;</span></td>
+      <tr class="tag-row" data-tag-id="{{ entry.tag.id }}" tabindex="0" style="cursor:pointer;" onclick="toggleTag('{{ entry.tag.id }}')">
+        <td style="padding-left:8px;"><input type="checkbox" disabled></td>
+        <td style="padding-left:36px;">{{ entry.tag.name }}</td>
+        <td style="padding-left:36px;">{{ entry.users|length }}</td>
+        <td><span id="arrow-{{ entry.tag.id }}" class="arrow" style="cursor:pointer;">&#x25BC;</span></td>
       </tr>
       <tr id="users-{{ entry.tag.id }}" class="tag-users-row" style="display:none; background:#f9fafb;">
         <td></td>
@@ -52,15 +71,17 @@
 
 <!-- Modal -->
 <div class="modal fade" id="addTagModal" tabindex="-1" aria-labelledby="addTagModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <form method="post">
         {% csrf_token %}
         <div class="modal-header">
-          <h5 class="modal-title" id="addTagModalLabel">New Tag</h5>
+          <h5 class="modal-title" id="addTagModalLabel">Add or Edit Tag</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+
         <div class="modal-body">
+          <!-- Tag Name Input -->
           <div class="mb-3">
             <label for="id_tag_name" class="form-label" style="font-weight:600;">Tag Name</label>
             <div class="input-group input-group-lg">
@@ -73,6 +94,7 @@
                 placeholder="Enter a tag name (e.g., Active Customers)"
                 aria-describedby="tagname-addon"
                 autocomplete="off"
+                value="{{ form.tag_name.value|default_if_none:'' }}"
                 required
               >
             </div>
@@ -81,14 +103,16 @@
             {% endif %}
           </div>
 
-          <hr>
-          <label for="user-search">Search Users:</label>
-          <input type="text" id="user-search" class="form-control mb-2" placeholder="Type to filter users..." onkeyup="filterUsers()">
-          {{ form.users }}
-          {% if form.users.errors %}
-            <div class="text-danger">{{ form.users.errors }}</div>
-          {% endif %}
+          <!-- Users Checkbox List -->
+          <div class="mb-3" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem;">
+            <label for="id_users" class="form-label" style="font-weight:600;">Select Users</label>
+            {{ form.users }}
+            {% if form.users.errors %}
+              <div class="text-danger">{{ form.users.errors }}</div>
+            {% endif %}
+          </div>
         </div>
+
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Tag</button>
@@ -97,36 +121,27 @@
     </div>
   </div>
 </div>
+{% endblock %}
 
-<script>
-function toggleTag(tagId) {
-  var userRow = document.getElementById('users-' + tagId);
-  var arrow = document.getElementById('arrow-' + tagId);
-  if (userRow.style.display === 'none' || userRow.style.display === '') {
-    userRow.style.display = 'table-row';
-    arrow.innerHTML = '&#x25B2;';
-  } else {
-    userRow.style.display = 'none';
-    arrow.innerHTML = '&#x25BC;';
-  }
-}
-
-function filterUsers() {
-  var input = document.getElementById('user-search');
-  var filter = input.value.toLowerCase();
-  var select = document.getElementById("id_users");
-  for (var i = 0; i < select.options.length; i++) {
-    var txtValue = select.options[i].text.toLowerCase();
-    select.options[i].style.display = txtValue.includes(filter) ? "" : "none";
-  }
-}
-</script>
-
+{% block extra_scripts %}
 <style>
-.tag-row:focus { background: #e6f0fa; outline: none; }
-.tag-row:hover { background: #f1f5f9; }
-.tag-users-row td { border-top: none !important; }
-#id_users { height: 200px; width: 100%; }
-.input-group-text { font-size: 1.2rem; }
+  .main {
+    max-width:1200px;
+    margin-left:0 !important;
+    padding:24px 0 24px 0 !important;
+  }
+  .tag-row:focus { background: #e6f0fa; outline: none; }
+  .tag-row:hover { background: #f1f5f9; }
+  .tag-users-row td { border-top: none !important; }
+  .input-group-text { font-size: 1.2rem; }
+
+  /* Style checkbox list */
+  #id_users {
+    display: block;
+  }
+  #id_users li {
+    display: block;
+    margin-bottom: 0.3rem;
+  }
 </style>
 {% endblock %}

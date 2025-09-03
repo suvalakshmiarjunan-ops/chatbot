@@ -1,95 +1,109 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Broadcast Message</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-      body {
-        font-family: "Segoe UI", Arial, sans-serif;
-        background: linear-gradient(135deg, #f0f4ff, #f7f8fb);
-        margin: 0;
-        padding: 0;
-      }
-      .wrap {
-        max-width: 640px;
-        margin: 60px auto;
-        background: #fff;
-        padding: 28px;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-      }
-      h1 {
-        font-size: 24px;
-        margin: 0 0 10px;
-        color: #1f2937;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .desc {
-        font-size: 14px;
-        color: #6b7280;
-        margin-bottom: 20px;
-      }
-      textarea {
-        width: 100%;
-        min-height: 160px;
-        padding: 14px;
-        font-size: 15px;
-        line-height: 1.5;
-        border: 1px solid #d1d5db;
-        border-radius: 10px;
-        background: #f9fafb;
-        outline: none;
-        transition: all 0.2s ease;
-        resize: vertical;
-      }
-      textarea:focus {
-        background: #fff;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-      }
-      .actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 16px;
-      }
-      button {
-        padding: 10px 20px;
-        font-size: 15px;
-        font-weight: 600;
-        background: #2563eb;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background 0.2s ease;
-      }
-      button:hover {
-        background: #1e4fc9;
-      }
-      button:active {
-        transform: scale(0.98);
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <h1>📢 Broadcast Message</h1>
-      <p class="desc">
-        Send an update to all your WhatsApp contacts in one go.
-      </p>
-      <form method="post" action="{% url 'send_broadcast' %}">
-        {% csrf_token %}
-        <textarea
-          name="message"
-          placeholder="Write your broadcast message here..."
-        ></textarea>
-        <div class="actions">
-          <button type="submit">Send Broadcast</button>
-        </div>
-      </form>
+{% extends "layouts/base.html" %}
+{% block title %}Broadcast Message{% endblock %}
+
+{% block content %}
+<style>
+  .wrap {
+    max-width: 640px;
+    margin: 60px auto;
+    background: #fff;
+    padding: 28px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  }
+  h1 {
+    font-size: 24px;
+    margin: 0 0 10px;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .desc {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 20px;
+  }
+  input, select, textarea {
+    width: 100%;
+    font-size: 15px;
+    margin-bottom: 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 12px;
+    background: #f9fafb;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  input:focus, select:focus, textarea:focus {
+    background: #fff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+  }
+  textarea {
+    min-height: 120px;
+    resize: vertical;
+    margin-bottom: 20px;
+  }
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  button:hover {
+    background: #1e4fc9;
+  }
+  button:active {
+    transform: scale(0.98);
+  }
+</style>
+<div class="wrap">
+  <h1>📢 Broadcast Message</h1>
+  <p class="desc">
+    Send an update to specific WhatsApp contacts with your chosen template and message.
+  </p>
+  <form method="post" action="{% url 'send_broadcast' %}">
+    {% csrf_token %}
+    <label for="phone">Phone Number (with country code):</label>
+    <input
+      type="text"
+      id="phone"
+      name="phone"
+      placeholder="+919876543210"
+      required
+    />
+
+    <label for="template">Select Broadcast Template:</label>
+    <select id="template" name="template" required>
+      <option value="" disabled selected>Select template</option>
+      <option value="hello_world">Hello World</option>
+      <option value="service_update">Service Update</option>
+      <option value="promotion">Promotion</option>
+      <!-- Add more options as needed -->
+    </select>
+
+    <label for="message">Message Body:</label>
+    <textarea
+      id="message"
+      name="message"
+      placeholder="Type your custom message here..."
+      required
+    ></textarea>
+
+    <div class="actions">
+      <button type="submit">Send Broadcast</button>
     </div>
-  </body>
-</html>
+  </form>
+</div>
+{% endblock %}

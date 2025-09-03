@@ -47,8 +47,8 @@ def send_whatsapp_message(request):
     error_message = None
 
     # token = request.session.get('token')
-    token = 'EAAJDRQ3tmhcBPGZCMDOPZAgNSBZBRjT42NP56LwPZBTAdUJcQfyQJMqjdaxWiWGQBPdC8rDzrp4SFzvFy8nn2wJHkWtb73imDcoZBvtKmoilvZAydQS0zFdnSoFpiRmVNwzAhwjtdYFE6kiBXdp9zZAZA3VZAmjGREnQXflNSK4eFqfF6sMp5oZBdH3U4GZAmACK3L5kgZDZD'
-    phone_id = '659162020619134'
+    token = 'EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD'
+    phone_id = '1356495696480176'
     # token = 'EAAJDRQ3tmhcBPGZCMDOPZAgNSBZBRjT42NP56LwPZBTAdUJcQfyQJMqjdaxWiWGQBPdC8rDzrp4SFzvFy8nn2wJHkWtb73imDcoZBvtKmoilvZAydQS0zFdnSoFpiRmVNwzAhwjtdYFE6kiBXdp9zZAZA3VZAmjGREnQXflNSK4eFqfF6sMp5oZBdH3U4GZAmACK3L5kgZDZD'
     # phone_id = request.session.get('phone_id')
 
@@ -113,6 +113,86 @@ def send_whatsapp_message(request):
         'success_message': success_message,
         'error_message': error_message
     })
+
+# import requests
+# from datetime import datetime
+# from django.shortcuts import render
+# from django.views.decorators.csrf import csrf_exempt
+# from newapp.models import User, Message
+# from django.http import HttpResponse
+
+# @csrf_exempt
+# def send_whatsapp_message(request):
+#     if request.method != 'POST':
+#         # Only accept POST requests
+#         return HttpResponse("Method not allowed", status=405)
+
+#     phone_number_id = request.POST.get('phone_number_id', '')
+#     phone = request.POST.get('phone', '')
+#     message = request.POST.get('message', '')
+#     response_data = None
+#     success_message = None
+#     error_message = None
+
+#     if phone == '':
+#         return HttpResponse("Phone number missing", status=400)
+
+#     token = Admin.objects.filter(whatsapp_phone_id=phone_number_id).values_list('whatsapp_token', flat=True).first()
+#     if token is None or token == '':
+#         return HttpResponse("WhatsApp token missing", status=400)
+
+#     url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
+#     headers = {
+#         "Authorization": f"Bearer {token}",
+#         "Content-Type": "application/json"
+#     }
+#     payload = {
+#         "messaging_product": "whatsapp",
+#         "to": phone,
+#         "type": "text",
+#         "text": {"body": message}
+#     }
+
+#     try:
+#         res = requests.post(url, json=payload, headers=headers)
+#         response_data = res.json()
+
+#         if res.status_code == 200 and "messages" in response_data:
+#             success_message = "✅ Message sent successfully!"
+#             existing_user = User.objects.filter(phone_no=phone).first()
+#             if not existing_user:
+#                 new_user = User.objects.create(
+#                     name='bot',
+#                     phone_no=phone,
+#                     created_at=datetime.now()
+#                 )
+#                 user_id = new_user.id
+#             else:
+#                 user_id = existing_user.id
+
+#             if user_id is not None:
+#                 user_instance = User.objects.get(id=user_id)
+#                 Message.objects.create(
+#                     user_id=user_instance,
+#                     messages=message,
+#                     created_at=datetime.now(),
+#                     who='bot'
+#                 )
+#         else:
+#             error_detail = response_data.get("error", {}).get("message", "Unknown error")
+#             error_message = f"❌ Failed to send message: {error_detail}"
+
+#     except Exception as e:
+#         error_message = f"❌ Exception occurred: {str(e)}"
+
+#     # Always return an HttpResponse or render at end
+#     return render(request, 'send_message.html', {
+#         'response': response_data,
+#         'success_message': success_message,
+#         'error_message': error_message
+#     })
+
+
 
 
 @csrf_exempt
@@ -211,95 +291,95 @@ def show_chatbox(request):
 #     return render(request, 'send_message.html', {'response': response_data})
 
 
-@csrf_exempt
-def get_message(request):
-    verify_token = "speeed"  # must match what's in Meta dashboard
+# @csrf_exempt
+# def get_message(request):
+#     verify_token = "speeed"  # must match what's in Meta dashboard
 
-    # ✅ Webhook verification (GET)
-    if request.method == 'GET':
-        mode = request.GET.get('hub.mode')
-        token = request.GET.get('hub.verify_token')
-        challenge = request.GET.get('hub.challenge')
+#     # ✅ Webhook verification (GET)
+#     if request.method == 'GET':
+#         mode = request.GET.get('hub.mode')
+#         token = request.GET.get('hub.verify_token')
+#         challenge = request.GET.get('hub.challenge')
 
-        if mode == 'subscribe' and token == verify_token:
-            return HttpResponse(challenge, status=200)
-        else:
-            return HttpResponse("Token verification failed", status=403)
+#         if mode == 'subscribe' and token == verify_token:
+#             return HttpResponse(challenge, status=200)
+#         else:
+#             return HttpResponse("Token verification failed", status=403)
 
-    # ✅ Webhook message (POST)
-    elif request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            # print("Webhook Data:", json.dumps(data, indent=2))
+#     # ✅ Webhook message (POST)
+#     elif request.method == 'POST':
+#         try:
+#             data = json.loads(request.body)
+#             # print("Webhook Data:", json.dumps(data, indent=2))
 
-            entry = data.get('entry', [])[0]
-            changes = entry.get('changes', [])[0]
-            value = changes.get('value', {})
-            messages = value.get('messages', [])[0]
+#             entry = data.get('entry', [])[0]
+#             changes = entry.get('changes', [])[0]
+#             value = changes.get('value', {})
+#             messages = value.get('messages', [])[0]
 
-            phone = messages.get('from')  # WhatsApp number
-            msg_text = messages.get('text', {}).get('body')
+#             phone = messages.get('from')  # WhatsApp number
+#             msg_text = messages.get('text', {}).get('body')
 
-            existing_user = User.objects.filter(phone_no=phone).first()
+#             existing_user = User.objects.filter(phone_no=phone).first()
 
-            if not existing_user:
-                existing_user = User.objects.create(
-                    name='user',
-                    phone_no=phone,
-                    created_at=datetime.now()
-                )
-                print(f"✅ New user created: {existing_user.id}")
+#             if not existing_user:
+#                 existing_user = User.objects.create(
+#                     name='user',
+#                     phone_no=phone,
+#                     created_at=datetime.now()
+#                 )
+#                 print(f"✅ New user created: {existing_user.id}")
 
-            Message.objects.create(
-                user_id=existing_user,
-                messages=msg_text,
-                created_at=datetime.now(),
-                who='human'
-            )
+#             Message.objects.create(
+#                 user_id=existing_user,
+#                 messages=msg_text,
+#                 created_at=datetime.now(),
+#                 who='human'
+#             )
 
-            pc = Pinecone(
-                api_key='pcsk_2ayS93_Mo3c98NYEpDXKoSWadNcjjtwAmCPwDJ8Yj3jWHpMhtpvxA5aqSMawtxPYYmRgq1')
+#             pc = Pinecone(
+#                 api_key='pcsk_2ayS93_Mo3c98NYEpDXKoSWadNcjjtwAmCPwDJ8Yj3jWHpMhtpvxA5aqSMawtxPYYmRgq1')
 
-            assistant = pc.assistant.Assistant(assistant_name="yahi")
+#             assistant = pc.assistant.Assistant(assistant_name="yahi")
 
-            msg = Pinemessage(content=msg_text)
-            resp = assistant.chat(messages=[msg])
+#             msg = Pinemessage(content=msg_text)
+#             resp = assistant.chat(messages=[msg])
 
-            bot_response = resp["message"]["content"]  # content
-            print(bot_response)
-            phone_number = phone
-            payload = {
-                "phone": phone_number,
-                "message": bot_response
-            }
-            response = requests.post(
-                "https://46f76b389ec3.ngrok-free.app/send_whatsapp_message/", data=payload)
-            # exit
-            chunks = assistant.chat(messages=[msg], stream=True)
+#             bot_response = resp["message"]["content"]  # content
+#             print(bot_response)
+#             phone_number = phone
+#             payload = {
+#                 "phone": phone_number,
+#                 "message": bot_response
+#             }
+#             response = requests.post(
+#                 "https://494b6c088862.ngrok-free.app/send_whatsapp_message/", data=payload)
+#             # exit
+#             chunks = assistant.chat(messages=[msg], stream=True)
 
 
-# With streaming
+# # With streaming
 
-            return HttpResponse("Message stored", status=200)
+#             return HttpResponse("Message stored", status=200)
 
-        except Exception as e:
-            print("Webhook Error:", str(e))
-            return HttpResponse(f"Error: {str(e)}", status=400)
+#         except Exception as e:
+#             print("Webhook Error:", str(e))
+#             return HttpResponse(f"Error: {str(e)}", status=400)
 
 
 def broadcast_msg(request):
     return render(request, 'broadcast_form.html')
 
 
-WHATSAPP_API_URL = "https://graph.facebook.com/v22.0/659162020619134/messages"
-ACCESS_TOKEN = "EAAJDRQ3tmhcBPGZCMDOPZAgNSBZBRjT42NP56LwPZBTAdUJcQfyQJMqjdaxWiWGQBPdC8rDzrp4SFzvFy8nn2wJHkWtb73imDcoZBvtKmoilvZAydQS0zFdnSoFpiRmVNwzAhwjtdYFE6kiBXdp9zZAZA3VZAmjGREnQXflNSK4eFqfF6sMp5oZBdH3U4GZAmACK3L5kgZDZD"  # your WhatsApp Cloud API token
+WHATSAPP_API_URL = "https://graph.facebook.com/v22.0/1356495696480176/messages"
+ACCESS_TOKEN = "EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD"  # your WhatsApp Cloud API token
 
 
 # views.py
 # views.py
 
-WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/659162020619134/messages"
-ACCESS_TOKEN ='EAAJDRQ3tmhcBPGZCMDOPZAgNSBZBRjT42NP56LwPZBTAdUJcQfyQJMqjdaxWiWGQBPdC8rDzrp4SFzvFy8nn2wJHkWtb73imDcoZBvtKmoilvZAydQS0zFdnSoFpiRmVNwzAhwjtdYFE6kiBXdp9zZAZA3VZAmjGREnQXflNSK4eFqfF6sMp5oZBdH3U4GZAmACK3L5kgZDZD'
+WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/1356495696480176/messages"
+ACCESS_TOKEN ='EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD'
 
 
 def send_broadcast(request):
@@ -389,17 +469,37 @@ def send_broadcast(request):
     # return HttpResponse("<br>".join(results))
 from django.shortcuts import render
 
+# def dashboard_view(request):
+#     admin_id=request.session.get('admin_id')
+#     # return HttpResponse(admin_id)
+#     user=Admin.objects.filter(id=admin_id).only('display_phone_no').first()
+#     display_phone_number=''.join((user.display_phone_no).split())
+#     # return HttpResponse(display_phone_number)
+#     # return HttpResponse(phone_id.whatsapp_phone_id)
+#     user_phone=f"https://wa.me/{display_phone_number}"
+#     # return HttpResponse(user_phone)
+#     count=User.objects.count()
+#     return render(request, 'dashboard.html',{'count':count,'phone_id':user_phone})
 def dashboard_view(request):
-    admin_id=request.session.get('admin_id')
-    # return HttpResponse(admin_id)
-    user=Admin.objects.filter(id=admin_id).only('display_phone_no').first()
-    display_phone_number=''.join((user.display_phone_no).split())
-    # return HttpResponse(display_phone_number)
-    # return HttpResponse(phone_id.whatsapp_phone_id)
-    user_phone=f"https://wa.me/{display_phone_number}"
-    # return HttpResponse(user_phone)
-    count=User.objects.count()
-    return render(request, 'dashboard.html',{'count':count,'phone_id':user_phone})
+    admin_id = request.session.get('admin_id')
+    user = Admin.objects.filter(id=admin_id).only('display_phone_no', 'whatsapp_token', 'whatsapp_phone_id').first()
+    
+    display_phone_number = ''.join((user.display_phone_no).split()) if user else ''
+    user_phone = f"https://wa.me/{display_phone_number}"
+
+    whatsapp_connected = bool(user and user.whatsapp_token)
+
+    count = User.objects.count()
+    active_contacts_count = 0  # Replace with your logic if available
+
+    context = {
+        'count': count,
+        'phone_id': user_phone,
+        'whatsapp_connected': whatsapp_connected,
+        'active_contacts_count': active_contacts_count,
+    }
+    return render(request, 'dashboard.html', context)
+
 
 def inbox_view(request):
     return render(request, 'inbox.html')
@@ -413,120 +513,44 @@ def contacts_view(request):
 def settings_view(request):
     return render(request, 'settings.html')
 
-# @csrf_exempt
-# def chatgpt_integration(request):
-#     if request.method == 'POST':
-#         api_key = request.POST.get('api_key')
-
-#         if api_key:
-#             # Store the API key in the database (e.g., in the Admin model)
-#             admin = Admin.objects.first()  # Update logic to select current admin as needed
-#             admin.openai_api_key = api_key
-#             admin.save()
-
-#             # Save the API key in session
-#             request.session['openai_api_key'] = api_key
-
-#             # Test API key by making a simple OpenAI request using the new API:
-#             import openai
-#             openai.api_key = api_key
-#             try:
-#                 models = openai.models.list()  # New method to check API access
-#                 return JsonResponse({'status': 'success', 'message': 'ChatGPT integrated successfully.'})
-#             except openai.error.AuthenticationError:
-#                 return JsonResponse({'status': 'error', 'error': 'Invalid API Key.'}, status=400)
-#             except Exception as e:
-#                 # Catch other exceptions such as network issues, rate limits, etc.
-#                 return JsonResponse({'status': 'error', 'error': f'OpenAI error: {str(e)}'}, status=400)
-
-#         return JsonResponse({'status': 'error', 'error': 'API Key is required.'}, status=400)
-
-#     return JsonResponse({'status': 'error', 'error': 'Invalid method.'}, status=400)
 
 
-
-# @csrf_exempt
-# def chatgpt_respond(request):
-#     if request.method == 'POST':
-#         user_message = request.POST.get('message')
-#         api_key = request.session.get('openai_api_key')
-#         if not api_key:
-#             return JsonResponse({'error': 'ChatGPT integration not configured'}, status=400)
-
-#         try:
-#             client = OpenAI(api_key=api_key)
-#             response = client.chat.completions.create(
-#                 model="gpt-4",  # or "gpt-3.5-turbo"
-#                 messages=[{"role": "user", "content": user_message}],
-#             )
-#             reply = response.choices[0].message.content
-#             return JsonResponse({'reply': reply})
-
-#         except Exception as e:
-#             return JsonResponse({'error': str(e)}, status=500)
-
-#     return JsonResponse({'error': 'Invalid HTTP method'}, status=405)
-
-
-
-# def tag_view(request):
-#     if request.method == 'POST':
-#         form = TaggingForm(request.POST)
-#         if form.is_valid():
-#             tag_name = form.cleaned_data['tag_name']
-#             users = form.cleaned_data['users']
-#             tag, created = Tag.objects.get_or_create(name=tag_name)
-#             for user in users:
-#                 UserTag.objects.get_or_create(user=user, tag=tag)
-#             return redirect('add_tag')
-#         else:
-#             print("Form errors:", form.errors)  # Place it here
-#     else:
-#         form = TaggingForm()
-
-#     tag_list = []
-#     if request.method == 'POST':
-#         form = TaggingForm(request.POST)
-#         if form.is_valid():
-#             tag_name = form.cleaned_data['tag_name']
-#             users = form.cleaned_data['users']
-#             tag, created = Tag.objects.get_or_create(name=tag_name)
-#             for user in users:
-#                 UserTag.objects.get_or_create(user=user, tag=tag)
-#             return redirect('add_tag')  # prevents resubmission on page refresh
-#     else:
-#         form = TaggingForm()
-
-#     tags = Tag.objects.all()
-#     for tag in tags:
-#         tagged_users = User.objects.filter(usertag__tag=tag)
-#         tag_list.append({'tag': tag, 'users': tagged_users})
-
-#     return render(request, 'contact/tag.html', {
-#         'form': form,
-#         'tag_list': tag_list,
-#     })
 
 from django.shortcuts import render, redirect
 from .forms import TaggingForm
 from .models import Tag, User, UserTag
-
+@csrf_exempt
 def tag_view(request):
     if request.method == 'POST':
         form = TaggingForm(request.POST)
         if form.is_valid():
             tag_name = form.cleaned_data['tag_name']
-            users = form.cleaned_data['users']
+            selected_users = form.cleaned_data['users']
             tag, created = Tag.objects.get_or_create(name=tag_name)
+
+            # Delete all existing users from this tag
             UserTag.objects.filter(tag=tag).delete()
-            for user in users:
+
+            # Add users from submitted form
+            for user in selected_users:
                 UserTag.objects.get_or_create(user=user, tag=tag)
-            return redirect('add_tag')  # URL name should match your urls.py
+
+            return redirect('add_tag')
         else:
             print("Form errors:", form.errors)
     else:
+        # Display form for editing or creating
         form = TaggingForm()
-
+        tag_name = request.GET.get('tag_name', None)
+        if tag_name:
+            tag = Tag.objects.filter(name=tag_name).first()
+            if tag:
+                users_of_tag = User.objects.filter(usertag__tag=tag)
+                form = TaggingForm(initial={
+                    'tag_name': tag.name,
+                    'users': users_of_tag,
+                })
+    # supply tag_list as before
     tag_list = []
     tags = Tag.objects.all()
     for tag in tags:
@@ -539,76 +563,294 @@ def tag_view(request):
     })
 
 
-# import json
-# from django.http import JsonResponse
-# from django.views.decorators.csrf import csrf_exempt
-# from django.contrib.auth.decorators import login_required
-# from django.utils.decorators import method_decorator
-# from django.views import View
-# from .models import Admin
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from .models import User
+
+@login_required
+def user_search_api(request):
+    q = request.GET.get('q', '')
+    users = User.objects.filter(name__icontains=q)[:20]
+    results = [{'id': user.id, 'text': user.name} for user in users]
+    return JsonResponse({'items': results})
+
+# google_calendar
+
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from datetime import datetime, timedelta
+import pytz
+
+# ====== CONFIG ======
+SERVICE_ACCOUNT_FILE = "credentials/service-account.json"  # Adjust path
+CALENDAR_ID = "aravindkumarpro012@gmail.com"  # Replace with your Google Calendar ID
+TIMEZONE = "Asia/Kolkata"
+SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 
-# @method_decorator(login_required, name='dispatch')
-# class ConnectGoogleCalendarView(View):
-#     def post(self, request):
+def get_service():
+    creds = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    )
+    return build("calendar", "v3", credentials=creds)
+
+
+def create_event(date_str, time_str="10:00", title="Appointment", description="", duration_minutes=60):
+    service = get_service()
+    tz = pytz.timezone(TIMEZONE)
+    start_dt = tz.localize(datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M"))
+    end_dt = start_dt + timedelta(minutes=duration_minutes)
+
+    event_body = {
+        "summary": title,
+        "description": description,
+        "start": {"dateTime": start_dt.isoformat(), "timeZone": TIMEZONE},
+        "end": {"dateTime": end_dt.isoformat(), "timeZone": TIMEZONE},
+    }
+
+    event = service.events().insert(calendarId=CALENDAR_ID, body=event_body).execute()
+    return event.get('htmlLink')
+
+
+from django.views.decorators.csrf import csrf_protect
+from django.shortcuts import render
+# from .google_calendar import create_event  # Import your create_event function from where you defined it
+
+
+# @csrf_protect
+# def create_event_api(request):
+#     success_message = None
+#     error_message = None
+
+#     if request.method == "POST":
+#         date = request.POST.get("date")
+#         time = request.POST.get("time", "10:00")
+#         title = request.POST.get("title", "Appointment")
+#         description = request.POST.get("description", "")
+#         duration = request.POST.get("duration", "60")
+
 #         try:
-#             data = json.loads(request.body)
-#             calendar_id = data.get('calendar_id', '').strip()
-#             if not calendar_id:
-#                 return JsonResponse({'msg': 'Calendar ID is required'}, status=400)
+#             duration = int(duration)
+#         except ValueError:
+#             duration = 60
 
-#             admin_id = request.session.get('admin_id')
-#             if not admin_id:
-#                 return JsonResponse({'msg': 'Not authorized'}, status=403)
-
-#             admin = Admin.objects.filter(id=admin_id).first()
-#             if not admin:
-#                 return JsonResponse({'msg': 'Admin not found'}, status=404)
-
-#             admin.google_calendar_id = calendar_id
-#             admin.save(update_fields=['google_calendar_id'])
-
-#             return JsonResponse({'msg': 'Google Calendar connected successfully'})
-#         except Exception as e:
-#             return JsonResponse({'msg': str(e)}, status=500)
-
-
-# @method_decorator(login_required, name='dispatch')
-# class DisconnectGoogleCalendarView(View):
-#     def post(self, request):
 #         try:
-#             admin_id = request.session.get('admin_id')
-#             if not admin_id:
-#                 return JsonResponse({'msg': 'Not authorized'}, status=403)
-
-#             admin = Admin.objects.filter(id=admin_id).first()
-#             if not admin:
-#                 return JsonResponse({'msg': 'Admin not found'}, status=404)
-
-#             admin.google_calendar_id = ''
-#             admin.save(update_fields=['google_calendar_id'])
-
-#             return JsonResponse({'msg': 'Google Calendar disconnected'})
+#             event_link = create_event(date, time, title, description, duration)
+#             success_message = f"Event '{title}' created successfully! <a href='{event_link}' target='_blank'>View Event</a>"
 #         except Exception as e:
-#             return JsonResponse({'msg': str(e)}, status=500)
+#             error_message = f"Failed to create event: {str(e)}"
 
-
-# # In your existing settings_view or integration page view, add:
-
-# @login_required
-# def integration_page(request):
-#     admin_id = request.session.get('admin_id')
-#     google_calendar_id = ''
-#     google_calendar_connected = False
-#     if admin_id:
-#         admin = Admin.objects.filter(id=admin_id).first()
-#         if admin and admin.google_calendar_id:
-#             google_calendar_id = admin.google_calendar_id
-#             google_calendar_connected = True
-
-#     # Pass these to your integration template
-#     return render(request, 'integration_channels.html', {
-#         'google_calendar_id': google_calendar_id,
-#         'google_calendar_connected': google_calendar_connected,
-#         # Add other context variables as needed
+#     return render(request, 'calendar/form.html', {
+#         'success_message': success_message,
+#         'error_message': error_message,
 #     })
+@csrf_exempt
+def create_event_api(request):
+    success_message = None
+    error_message = None
+
+    if request.method == "POST":
+        date = request.POST.get("date")
+        time = request.POST.get("time", "10:00")
+        title = request.POST.get("title", "Appointment")
+        description = request.POST.get("description", "")
+        duration = request.POST.get("duration", "60")
+        user_email = request.POST.get("user_email", "Unknown user")  # <-- get user_email from form
+        admin_id = request.POST.get("admin_id", "Unknown admin")
+        user_id = request.POST.get("user_id", "Unknown user")
+
+        try:
+            duration = int(duration)
+        except ValueError:
+            duration = 60
+
+        # Append user email to event description
+        full_description = f"Created by: {user_email}\n\n{description}"
+
+        try:
+            event_link = create_event(date, time, title, full_description, duration)  # use full_description
+            success_message = f"Event '{title}' created successfully! <a href='{event_link}' target='_blank'>View Event</a>"
+        except Exception as e:
+            error_message = f"Failed to create event: {str(e)}"
+
+    return render(request, 'calendar/form.html', {
+        'success_message': success_message,
+        'error_message': error_message,
+        'admin_id': admin_id,
+        'user_id': user_id,
+        'user_email': user_email,
+    })
+
+#chat gpt part
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required  # use if needed
+from newapp.models import Admin  # or wherever you store the API keys
+import openai
+
+@csrf_exempt
+def chatgpt_respond(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            user_prompt = data.get("prompt", "").strip()
+            if not user_prompt:
+                return JsonResponse({"error": "Prompt cannot be empty."}, status=400)
+
+            admin = Admin.objects.first()
+            if not admin or not admin.openai_api_key:
+                return JsonResponse({"error": "ChatGPT API key not configured."}, status=403)
+
+            openai.api_key = admin.openai_api_key
+
+            response = openai.ChatCompletion.create(
+                model="gpt-4",  # or "gpt-3.5-turbo"
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            reply = response.choices[0].message.content
+
+            # Here you can also add your logic to send this reply back to WhatsApp user if needed
+
+            return JsonResponse({"reply": reply})
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method."}, status=405)
+
+from django.shortcuts import render, redirect
+from .models import ChatGPTPrompt
+@csrf_exempt
+def chatgpt_prompt_page(request):
+    prompt_obj = ChatGPTPrompt.objects.first()
+    current_prompt = prompt_obj.prompt_text if prompt_obj else ""
+
+    if request.method == "POST":
+        new_prompt = request.POST.get("prompt_text", "").strip()
+        if prompt_obj:
+            prompt_obj.prompt_text = new_prompt
+            prompt_obj.save()
+        else:
+            ChatGPTPrompt.objects.create(prompt_text=new_prompt)
+        return redirect('chatgpt_prompt_page')
+
+    return render(request, 'chatgpt_prompt.html', {"prompt": current_prompt})
+
+@csrf_exempt
+def get_message_chatgpt(request):
+    if request.method != "POST":
+        return HttpResponse(status=200)
+
+    try:
+        data = json.loads(request.body)
+        entry = data.get('entry', [])[0]
+        changes = entry.get('changes', [])[0]
+        value = changes.get('value', {})
+        messages_list = value.get('messages', [])
+
+        if not messages_list:
+            return HttpResponse("No messages", status=400)
+
+        messages = messages_list[0]
+        phone = messages.get('from')  # WhatsApp number
+        user_text = messages.get('text', {}).get('body')
+
+        admin = Admin.objects.first()
+        if not admin or not admin.openai_api_key:
+            return HttpResponse("ChatGPT API key not configured", status=400)
+
+        # Save incoming message
+        user_obj, _ = User.objects.get_or_create(
+            phone_no=phone,
+            defaults={'name': 'user', 'created_at': datetime.now()}
+        )
+        Message.objects.create(
+            user_id=user_obj,
+            messages=user_text,
+            created_at=datetime.now(),
+            who='human'
+        )
+
+        prompt_obj = ChatGPTPrompt.objects.first()
+        common_prompt = prompt_obj.prompt_text if prompt_obj else ""
+
+        chatgpt_input = f"{common_prompt}\n\nUser: {user_text}" if common_prompt else user_text
+
+        # Call OpenAI API
+        openai.api_key = admin.openai_api_key
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": chatgpt_input}],
+        )
+        reply = response.choices[0].message.content
+
+        # Save reply
+        Message.objects.create(
+            user_id=user_obj,
+            messages=reply,
+            created_at=datetime.now(),
+            who='bot'
+        )
+
+        # Send reply back via WhatsApp
+        whatsapp_api_url = f"https://graph.facebook.com/v17.0/{admin.whatsapp_phone_id}/messages"
+        headers = {
+            "Authorization": f"Bearer {admin.whatsapp_token}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": phone,
+            "type": "text",
+            "text": {"body": reply}
+        }
+        requests.post(whatsapp_api_url, json=payload, headers=headers)
+
+        return HttpResponse("ChatGPT message processed", status=200)
+
+    except Exception as e:
+        print(f"ChatGPT webhook error: {str(e)}")
+        return HttpResponse(f"Error: {str(e)}", status=400)
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+from .models import Admin
+
+
+@csrf_exempt
+def connect_openai_key(request):
+    if request.method == "POST":
+        data = json.loads(request.body.decode("utf-8"))
+        api_key = data.get("api_key", "").strip()
+        if not api_key:
+            return JsonResponse({"msg": "API key is required."}, status=400)
+
+        admin = Admin.objects.first()
+        if not admin:
+            return JsonResponse({"msg": "Admin not found."}, status=404)
+
+        # Disconnect Pinecone
+        admin.pinecone_token = ""
+
+        # Save ChatGPT API key
+        admin.openai_api_key = api_key
+        admin.save(update_fields=['pinecone_token', 'openai_api_key'])
+        return JsonResponse({"msg": "ChatGPT API key connected. Pinecone disconnected."})
+    return JsonResponse({"msg": "Invalid request."}, status=405)
+
+@csrf_exempt
+def disconnect_openai_key(request):
+    if request.method == "POST":
+        admin = Admin.objects.first()
+        if not admin:
+            return JsonResponse({"msg": "Admin not found."}, status=404)
+
+        admin.openai_api_key = ""
+        admin.save(update_fields=['openai_api_key'])
+        return JsonResponse({"msg": "ChatGPT API key disconnected."})
+    return JsonResponse({"msg": "Invalid request."}, status=405)

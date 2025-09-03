@@ -99,6 +99,12 @@
   <i class="fas fa-user"></i> My Contacts
 </a>
 
+{% url 'broadcast_msg' as broadcast_url %}
+<a href="{{ broadcast_url }}" class="{% if request.path == broadcast_url %}active{% endif %}">
+  <i class="fas fa-bullhorn"></i> Broadcast
+</a>
+
+
 
   {% url 'settings' as settings_url %}
   <a href="{{ settings_url }}" class="{% if request.path|startswith:'settings' %}active{% endif %}">

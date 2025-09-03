@@ -28,6 +28,9 @@ urlpatterns = [
     path('contact/add',Contactcontroller.add_user,name='add_user'),
     path('contact/add_admin_user',Contactcontroller.add_admin_user,name='add_admin_user'),
     path('contact/tag/', views.tag_view, name='add_tag'),
+    path('api/users/', views.user_search_api, name='user_search_api'),
+    path('contact/edit/<int:id>/', Contactcontroller.edit_user, name='edit_user'),
+    path('contact/delete/<int:id>/', Contactcontroller.delete_user, name='delete_user'),
     
     # setting
     path('settings/',Settingcontroller.dashboard , name='settings'),
@@ -47,12 +50,16 @@ urlpatterns = [
     path('disconnect/',whatsappcontroller.disconnect,name='disconnect'), 
     path('send_trigger/',whatsappcontroller.send_trigger,name='send_trigger'),
     path('appointment_date/',whatsappcontroller.appointment_date,name='appointment_date'),
+
+    # Google Calendar event creation API endpoint
+    path('create-event/', views.create_event_api, name='create_event_api'),
     
     
     
     # pinecone
-    path('disconnect_pinecone/',Integrationcontroller.dissconnect,name='dissconnect'),
+    path('disconnect_pinecone/',Integrationcontroller.disconnect,name='disconnect'),
     path('connect_pinecone_token/',Integrationcontroller.connect,name='pinecone_connect'),
+    
     
     path('flows/', views.flows_view, name='flows'),
     path('admin/', admin.site.urls),
@@ -65,7 +72,14 @@ urlpatterns = [
     path('chatbox/', views.show_chatbox, name='chatbox'),
     path('broadcast_msg/',views.broadcast_msg,name='broadcast_msg'),
     path('send_broadcast/', views.send_broadcast, name='send_broadcast'),
-    
+
+
+    #chatgpt
+    path('connect_openai_key/', views.connect_openai_key, name='connect_openai_key'),
+    path('disconnect_openai_key/', views.disconnect_openai_key, name='disconnect_openai_key'),
+    path('chatgpt_prompt/', views.chatgpt_prompt_page, name='chatgpt_prompt_page'),
+    path('whatsapp/chatgpt_webhook/', views.get_message_chatgpt, name='chatgpt_webhook'),
+ 
 
 
     # path('new/',views.new,name='new')  # ✅ This line is correct

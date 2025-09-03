@@ -37,5 +37,11 @@ class TaggingForm(forms.Form):
     users = forms.ModelMultipleChoiceField(
         queryset=User.objects.all(),
         required=False,
-        widget=forms.SelectMultiple(attrs={'id': 'id_users', 'class': 'form-control'})
+        # widget=forms.SelectMultiple(attrs={'id': 'id_users', 'class': 'form-control'})
+        # widget=forms.SelectMultiple(attrs={'id': 'id_users'})
+        widget=forms.CheckboxSelectMultiple  # shows all users as checkboxes
     )
+class UserForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['name', 'phone_no']  # Add any other fields editable

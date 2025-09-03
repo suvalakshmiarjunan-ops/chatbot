@@ -102,7 +102,15 @@
         <div class="channel-card">
             <i class="fab fa-whatsapp" style="color: #25D366;"></i>
             <div>WhatsApp</div>
-            <button><a href="{{phone_id}}">Test Now</a></button>
+            {% if whatsapp_connected %}
+            <button>
+            <a href="{{ phone_id }}" style="color:white; text-decoration:none;">Test Now</a>
+            </button>
+            {% else %}
+            <button style="background:#25D366;">
+            <a href="{% url 'connect_whatsapp' %}" style="color:white; text-decoration:none;">Connect</a>
+            </button>
+            {% endif %}
         </div>
         <div class="channel-card">
             <i class="fab fa-instagram" style="color: #E4405F;"></i>

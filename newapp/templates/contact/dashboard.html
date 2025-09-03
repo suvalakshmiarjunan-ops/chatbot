@@ -62,15 +62,20 @@
       cursor: pointer;
       font-size: 14px;
       font-weight: 500;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .btn:hover {
       background: rgba(59, 130, 246, 0.1); /* light blue on hover */
     }
 
+    /* Changed grid columns to 6 to include Actions column */
     .table-head {
       display: grid;
-      grid-template-columns: 48px 2fr 2fr 1.5fr 1.5fr;
+      grid-template-columns: 48px 2fr 2fr 1.5fr 1.5fr 1.5fr;
       padding: 10px 14px;
       color: #6b7280;
       font-weight: 600;
@@ -79,7 +84,7 @@
 
     .card {
       display: grid;
-      grid-template-columns: 48px 2fr 2fr 1.5fr 1.5fr;
+      grid-template-columns: 48px 2fr 2fr 1.5fr 1.5fr 1.5fr;
       align-items: center;
       padding: 12px 14px;
       margin-bottom: 8px;
@@ -127,6 +132,13 @@
       font-size: 14px;
     }
 
+    /* Actions column styling */
+    .actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
     @media (max-width: 640px) {
       .table-head { display: none; }
       .card {
@@ -135,44 +147,45 @@
       }
       .card .phone,
       .card .source,
-      .card .entered {
+      .card .entered,
+      .card .actions {
         grid-column: 2 / -1;
         color: #374151;
         font-weight: 500;
       }
       .main { padding: 16px; }
     }
-    a{
+
+    a {
       text-decoration: none;
     }
 
     .dropdown {
-  position: relative;
-  display: inline-block;
-}
-.dropdown-content {
-  display: none;
-  position: absolute;
-  right: 0;
-  background: #fff;
-  min-width: 120px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.06);
-  z-index: 99;
-}
-.dropdown-content a {
-  color: #111;
-  padding: 10px 16px;
-  display: block;
-  text-decoration: none;
-  border-radius: 8px;
-  font-size: 14px;
-}
-.dropdown-content a:hover {
-  background: #f1f5f9;
-}
-
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      background: #fff;
+      min-width: 120px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+      z-index: 99;
+    }
+    .dropdown-content a {
+      color: #111;
+      padding: 10px 16px;
+      display: block;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .dropdown-content a:hover {
+      background: #f1f5f9;
+    }
   </style>
 </head>
 <body>
@@ -197,7 +210,6 @@
           <a href="{% url 'add_tag' %}" id="addTagOption">Add Tag</a>
         </div>
       </div>
-      
       <a href="{% url 'add_user' %}" class="btn"><span>Add User</span></a>
     </div>
 
@@ -207,6 +219,7 @@
       <div>Phone number</div>
       <div>Source</div>
       <div>Last Seen</div>
+      <div>Actions</div>
     </div>
 
     <div id="rows">
@@ -228,6 +241,11 @@
           <div class="phone muted">{{ u.phone_no }}</div>
           <div class="source muted">Whatsapp</div>
           <div class="entered muted">{{ u.created_at }}</div>
+
+          <div class="actions">
+            <a href="{% url 'edit_user' u.id %}" class="btn">Edit</a>
+            <a href="{% url 'delete_user' u.id %}" class="btn" onclick="return confirm('Delete this user?');">Delete</a>
+          </div>
         </div>
       {% empty %}
         <p>No contacts yet.</p>
@@ -249,25 +267,18 @@
     })();
 
     (function() {
-  // Toggle dropdown visibility when clicking 'More' button
-  const moreBtn = document.getElementById('moreBtn');
-  const dropdownMenu = document.getElementById('dropdownMenu');
+      const moreBtn = document.getElementById('moreBtn');
+      const dropdownMenu = document.getElementById('dropdownMenu');
 
-  moreBtn && moreBtn.addEventListener('click', function(e) {
-    e.stopPropagation(); // prevent event bubbling
-    if (dropdownMenu.style.display === 'block') {
-      dropdownMenu.style.display = 'none';
-    } else {
-      dropdownMenu.style.display = 'block';
-    }
-  });
+      moreBtn && moreBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+      });
 
-  // Close the dropdown when clicking outside
-  document.addEventListener('click', function() {
-    dropdownMenu.style.display = 'none';
-  });
-})();
-
+      document.addEventListener('click', function() {
+        dropdownMenu.style.display = 'none';
+      });
+    })();
   </script>
 </body>
 </html>
