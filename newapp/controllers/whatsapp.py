@@ -16,6 +16,16 @@ from urllib.parse import urlencode
 from django.utils import timezone
 import openai
 from newapp.models import ChatGPTPrompt
+import logging
+import requests
+from newapp.views import send_whatsapp_reply
+from newapp.models import Tag, UserTag
+from newapp.tasks import send_followup_message
+from newapp.models import AIAgentConfig
+from django.utils import timezone
+from datetime import timedelta
+
+
 
 
 
@@ -94,8 +104,8 @@ class whatsappcontroller:
                 # persist bot message (uses timezone.now)
                 user = User.objects.filter(phone_no=phone).first()
                 if not user:
-                    user = User.objects.create(name='bot', phone_no=phone, created_at=timezone.now())
-                Message.objects.create(user_id=user, messages=message, created_at=timezone.now(), who='bot')
+                    user = User.objects.create(name='bot', phone_no=phone, created_at=datetime.now())
+                Message.objects.create(user_id=user, messages=message, created_at=datetime.now(), who='bot')
                 return JsonResponse({"ok": True, "provider_response": data}, status=200)
             else:
                 err = (data.get("error") or {}).get("message") or data
@@ -186,7 +196,6 @@ class whatsappcontroller:
     def get_message(request):
         VERIFY_TOKEN = "speeed"
 
-        # Webhook verification
         if request.method == 'GET':
             mode = request.GET.get('hub.mode')
             token = request.GET.get('hub.verify_token')
@@ -195,14 +204,14 @@ class whatsappcontroller:
                 return HttpResponse(challenge, status=200)
             return HttpResponse("Token verification failed", status=403)
 
-        # Webhook delivery
         if request.method == 'POST':
             try:
                 data = json.loads(request.body.decode("utf-8"))
+                print("Received webhook data:", data)
 
                 entries = data.get('entry') or []
                 if not entries:
-                    return HttpResponse("OK", status=200)  # ack silently
+                    return HttpResponse("OK", status=200)  # acknowledge silently
 
                 for entry in entries:
                     changes = entry.get('changes') or []
@@ -211,12 +220,10 @@ class whatsappcontroller:
                         metadata = value.get("metadata") or {}
                         phone_number_id = metadata.get('phone_number_id')
 
-                        # Make sure we have an Admin for this number
                         admin_check = Admin.objects.filter(whatsapp_phone_id=phone_number_id).first()
                         if not admin_check:
-                            continue  # ack but skip
+                            continue
 
-                        # messages/statuses may be absent
                         for m in value.get('messages') or []:
                             if m.get('type') != 'text':
                                 continue
@@ -226,36 +233,42 @@ class whatsappcontroller:
                             if not msg_text.strip():
                                 continue
 
-                            # upsert user
+                            contacts = value.get('contacts', [])
+                            wa_name = None
+                            if contacts and len(contacts) > 0:
+                                wa_name = contacts[0].get('profile', {}).get('name')
+
                             existing_user = User.objects.filter(phone_no=phone).first()
                             if not existing_user:
-                                existing_user = User.objects.create(
-                                    name='user',
-                                    admin_id=Admin.objects.get(id=admin_check.id),
+                                existing_user = User(
                                     phone_no=phone,
                                     created_at=datetime.now(),
+                                    admin_id=admin_check,
                                 )
+                            if wa_name:
+                                existing_user.name = wa_name
+                            existing_user.save()
+                            
+                            
+                            
+                            Message.objects.create(
+                                user_id=existing_user,
+                                messages=msg_text,
+                                created_at=datetime.now(),
+                                who='human'
+                            ) 
 
-                            # save human message
-                            try:
-                                Message.objects.create(
-                                    user_id=existing_user,
-                                    messages=msg_text,
-                                    created_at=datetime.now(),
-                                    who='human'
-                                )
-                            except Exception as db_in_e:
-                                print(f"DB inbound error: {db_in_e}")
-
-                            # Trigger link?
                             bot_response = None
                             trigger = False
+                            resp = None
+
+                            # Trigger calendar link logic (optional - your original code)
                             try:
                                 if getattr(admin_check, "goolgle_calendar", "") != "":
                                     if any(word in msg_text.lower() for word in ['book', 'appointment']):
                                         payload = {"msg_text": msg_text.lower(), 'admin_id': admin_check.id, 'user_id': existing_user.id}
                                         send_request = requests.post(
-                                            "https://2b526918e9a1.ngrok-free.app/send_trigger/",
+                                            "https://4f9989a857dd.ngrok-free.app/send_trigger/",
                                             data=payload,
                                             timeout=10
                                         )
@@ -264,115 +277,450 @@ class whatsappcontroller:
                                         bot_response = resp.get("url")
                                         trigger = True
                             except requests.RequestException as e:
-                                # non-fatal; we’ll fallback to NL response
                                 print(f"trigger error: {e}")
 
-                            # If not trigger: Pinecone -> ChatGPT fallback
                             if not trigger:
-                                # 1) Try Pinecone only if token exists
-                                try:
-                                    pine_token = getattr(admin_check, "pinecone_token", "") or ""
-                                    if pine_token:
-                                        pc = Pinecone(api_key=pine_token)
-                                        assistant = pc.assistant.Assistant(assistant_name="yahi")
-                                        pmsg = Pinemessage(content=msg_text)
-                                        resp = assistant.chat(messages=[pmsg])
-                                        bot_response = (resp or {}).get("message", {}).get("content")
-                                except Exception as pe:
-                                    print(f"Pinecone error: {pe}")
+                                openai_key = (getattr(admin_check, "openai_api_key", "") or "").strip()
+                                pine_token = (getattr(admin_check, "pinecone_token", "") or "").strip()
 
-                                # 2) Fallback to ChatGPT if bot_response missing
-                                # ---------------- LLM reply (ChatGPT first) ----------------
-                                if not trigger:
-                                    bot_response = None
-
-                                    openai_key = (getattr(admin_check, "openai_api_key", "") or "").strip()
-                                    pine_token = (getattr(admin_check, "pinecone_token", "") or "").strip()
-
-                                    if openai_key:
-                                        # ChatGPT path – uses your /chatgpt_prompt/ text as SYSTEM
-                                        try:
-                                            openai.api_key = openai_key
-
-                                            prompt_obj = ChatGPTPrompt.objects.first()
-                                            system_prompt = (prompt_obj.prompt_text or "").strip() if prompt_obj else ""
-                                            if not system_prompt:
-                                                system_prompt = (
-                                                    "Follow the owner's configured instructions exactly. "
-                                                    "If no instructions are configured, reply: 'Prompt not configured.'"
-                                                )
-
-                                            resp = openai.ChatCompletion.create(
-                                                # openai==0.28.1 interface
-                                                model="gpt-3.5-turbo",  # or "gpt-4" if your key has access
-                                                messages=[
-                                                    {"role": "system", "content": system_prompt},
-                                                    {"role": "user", "content": msg_text},
-                                                ],
-                                                timeout=15,
+                                if openai_key:
+                                    try:
+                                        openai.api_key = openai_key
+                                        if admin_check.chatgpt_mode == 'ai_agent':
+                                            ai_agent = AIAgentConfig.objects.filter(admin=admin_check, is_active=True).last()
+                                            pdf_content = ai_agent.pdf_text if ai_agent else ""
+                                            instructions = ai_agent.instruction if ai_agent else "Follow the owner's instructions and upload relevant FAQs."
+                                            system_prompt = f"{instructions}\n\nREFER TO THE FOLLOWING FAQ/INSTRUCTIONS:\n{pdf_content}"
+                                        else:
+                                            # Use latest ChatGPT prompt (for Prompt Mode)
+                                            prompt_obj = ChatGPTPrompt.objects.order_by('-updated_at').first()
+                                            system_prompt = (
+                                                prompt_obj.prompt_text.strip()
+                                                if prompt_obj and prompt_obj.prompt_text
+                                                else "Follow the admin's instructions to assist the user helpfully."
                                             )
-                                            bot_response = resp.choices[0].message.content.strip()
-                                            print("[LLM] ChatGPT used")
-                                        except Exception as oe:
-                                            print(f"[LLM] OpenAI error: {oe}")
-                                            bot_response = "Sorry, I couldn’t generate a response just now."
 
-                                    elif pine_token:
-                                        # Pinecone path – ONLY if ChatGPT isn’t configured
-                                        try:
-                                            pc = Pinecone(api_key=pine_token)
-                                            assistant = pc.assistant.Assistant(assistant_name="yahi")
-                                            pmsg = Pinemessage(content=msg_text)
-                                            presp = assistant.chat(messages=[pmsg])
-                                            bot_response = (presp or {}).get("message", {}).get("content")
-                                            print("[LLM] Pinecone used")
-                                        except Exception as pe:
-                                            print(f"[LLM] Pinecone error: {pe}")
-                                            bot_response = "Sorry, I couldn’t generate a response just now."
+
+                                        resp = openai.ChatCompletion.create(
+                                            model="gpt-3.5-turbo",
+                                            messages=[
+                                                {"role": "system", "content": system_prompt},
+                                                {"role": "user", "content": msg_text},
+                                            ],
+                                            timeout=15,
+                                        )
+                                    except Exception as oe:
+                                        print(f"[LLM] OpenAI error: {oe}")
+                                        resp = None
+
+                                    if resp and hasattr(resp, "choices") and len(resp.choices) > 0:
+                                        bot_response = resp.choices[0].message.content.strip()
+                                        print("[LLM] ChatGPT used")
                                     else:
-                                        bot_response = "Sorry, my assistant is offline right now."
+                                        bot_response = "Sorry, I couldn’t generate a response just now."
+                                elif pine_token:
+                                    try:
+                                        pc = Pinecone(api_key=pine_token)
+                                        admin = Admin.objects.first()
+                                        assistant_name = admin.assistant_name
+                                        assistant = pc.assistant.Assistant(assistant_name=assistant_name)
+                                        pmsg = Pinemessage(content=msg_text)
+                                        presp = assistant.chat(messages=[pmsg])
+                                        bot_response = (presp or {}).get("message", {}).get("content")
+                                        print("[LLM] Pinecone used")
+                                    except Exception as pe:
+                                        print(f"[LLM] Pinecone error: {pe}")
+                                        bot_response = "Sorry, I couldn’t generate a response just now."
+                                else:
+                                    bot_response = "Sorry, my assistant is offline right now."
 
-                                    if not bot_response:
-                                        bot_response = "Got it!"
-                                # ---------------- /LLM reply ----------------
+                                if not bot_response:
+                                    bot_response = "Got it!"
 
-                            # Send back via your sender endpoint
-                            payload = {
-                                "phone": phone,
-                                "message": bot_response,
-                                "phone_number_id": phone_number_id
-                            }
+                            # Safe parsing of AI response
+                            final_reply_text = None
+                            data_json = None
+
+                            if bot_response:
+                                if bot_response.strip().startswith("{") or bot_response.strip().startswith("["):
+                                    try:
+                                        data_json = json.loads(bot_response)
+                                    except json.JSONDecodeError:
+                                        data_json = None
+                                    if data_json is not None:
+                                        messages = data_json.get("messages", [])
+                                        if messages and isinstance(messages, list) and len(messages) > 0:
+                                            final_reply_text = messages[0].get("text") or messages[0].get("message", {}).get("text", "")
+                                        else:
+                                            final_reply_text = str(bot_response)
+                                    else:
+                                        final_reply_text = str(bot_response)
+                                else:
+                                    final_reply_text = str(bot_response)
+                            else:
+                                final_reply_text = "Sorry, I couldn't generate a response just now."
+                            
+                            # --- Add tagging logic here ---
+                            tag_keywords = ["active", "priority", "escalation"]
+                            if data_json:
+                                actions = data_json.get("actions", [])
+                                for action in actions:
+                                    if action.get("action") == "add_tag":
+                                        tag_name = action.get("tag_name", "").lower()
+                                        if tag_name in tag_keywords:
+                                            tag, _ = Tag.objects.get_or_create(name=tag_name)
+                                            if not UserTag.objects.filter(user=existing_user, tag=tag).exists():
+                                                UserTag.objects.create(user=existing_user, tag=tag)
+                                                print(f"User {existing_user.id} tagged with {tag_name}.")
+                            # --- Tagging logic ends here ---
+
+
+
+                            # Sending WhatsApp response
                             try:
                                 r = requests.post(
-                                    "https://2b526918e9a1.ngrok-free.app/send_whatsapp_message/",
-                                    data=payload,
+                                    "https://4f9989a857dd.ngrok-free.app/send_whatsapp_message/",
+                                    data={
+                                        "phone": existing_user.phone_no,
+                                        "message": final_reply_text,
+                                        "phone_number_id": phone_number_id
+                                    },
                                     timeout=15
                                 )
                                 if r.status_code != 200:
-                                    print(f"WA send error {r.status_code}: {r.text}")
-                            except Exception as se:
-                                print(f"WA send exception: {se}")
-
-                            # Save bot reply
-                            try:
+                                    print(f"send_whatsapp_message error: {r.status_code} - {r.text}")
+                            except Exception as e:
+                                print(f"Exception calling send_whatsapp_message: {e}")
+                            if not Message.objects.filter(
+                                user_id=existing_user,
+                                messages=final_reply_text,
+                                who="bot",
+                                created_at__gte=timezone.now()-timedelta(seconds=1)
+                            ).exists():
+                            # Save bot message
                                 Message.objects.create(
                                     user_id=existing_user,
-                                    messages=bot_response,
+                                    messages=final_reply_text,
                                     created_at=datetime.now(),
-                                    who='bot'
+                                    who="bot"
                                 )
-                            except Exception as db_out_e:
-                                print(f"DB bot save error: {db_out_e}")
+                            else:
+                                print("Duplicate bot reply prevented for user:", existing_user)
 
                 return HttpResponse("Message stored", status=200)
 
             except Exception as e:
                 print(f"Webhook Error: {str(e)}")
-                # return 200 so WA doesn't retry aggressively
                 return HttpResponse("OK", status=200)
 
-        # not GET/POST
         return HttpResponse("Method not allowed", status=405)
+
+    # @csrf_exempt
+    # def get_message(request):
+    #     VERIFY_TOKEN = "speeed"
+
+    #     # Webhook verification
+    #     if request.method == 'GET':
+    #         mode = request.GET.get('hub.mode')
+    #         token = request.GET.get('hub.verify_token')
+    #         challenge = request.GET.get('hub.challenge')
+    #         if mode == 'subscribe' and token == VERIFY_TOKEN:
+    #             return HttpResponse(challenge, status=200)
+    #         return HttpResponse("Token verification failed", status=403)
+
+    #     # Webhook delivery
+    #     if request.method == 'POST':
+    #         try:
+    #             data = json.loads(request.body.decode("utf-8"))
+    #             print("Received webhook data:", data)
+    #             # # Extract followup template early
+    #             # prompt_obj = ChatGPTPrompt.objects.first()
+    #             # prompt_text = (prompt_obj.prompt_text or "").strip() if prompt_obj else ""
+    #             # followup_template = whatsappcontroller.extract_followup_message(prompt_text)
+
+
+    #             entries = data.get('entry') or []
+    #             if not entries:
+    #                 return HttpResponse("OK", status=200)  # ack silently
+
+    #             for entry in entries:
+    #                 changes = entry.get('changes') or []
+    #                 for change in changes:
+    #                     value = change.get('value') or {}
+    #                     metadata = value.get("metadata") or {}
+    #                     phone_number_id = metadata.get('phone_number_id')
+
+    #                     # Validate admin
+    #                     admin_check = Admin.objects.filter(whatsapp_phone_id=phone_number_id).first()
+    #                     if not admin_check:
+    #                         continue
+
+    #                     for m in value.get('messages') or []:
+    #                         if m.get('type') != 'text':
+    #                             continue
+
+    #                         phone = m.get('from')
+    #                         msg_text = (m.get('text') or {}).get('body') or ""
+    #                         if not msg_text.strip():
+    #                             continue
+                            
+    #                         # 1. Find the profile name in the webhook contacts
+    #                         contacts = value.get('contacts', [])
+    #                         wa_name = None
+    #                         if contacts and len(contacts) > 0:
+    #                             wa_name = contacts[0].get('profile', {}).get('name')
+
+    #                         # 2. When creating or updating the user, store the name
+    #                         existing_user = User.objects.filter(phone_no=phone).first()
+    #                         if not existing_user:
+    #                             existing_user = User(
+    #                                 phone_no=phone,
+    #                                 created_at=datetime.now(),
+    #                                 admin_id=Admin.objects.get(id=admin_check.id),
+    #                             )
+
+    #                         if wa_name:
+    #                             existing_user.name = wa_name
+
+    #                         existing_user.save()
+
+
+    #                         # Upsert user with timezone aware datetime
+    #                         existing_user = User.objects.filter(phone_no=phone).first()
+    #                         if not existing_user:
+    #                             existing_user = User.objects.create(
+    #                                 name='user',
+    #                                 admin_id=Admin.objects.get(id=admin_check.id),
+    #                                 phone_no=phone,
+    #                                 created_at=datetime.now(),
+    #                             )
+
+    #                         # Save human message
+    #                         try:
+    #                             Message.objects.create(
+    #                                 user_id=existing_user,
+    #                                 messages=msg_text,
+    #                                 created_at=datetime.now(),
+    #                                 who='human'
+    #                             )
+    #                         except Exception as db_in_e:
+    #                             print(f"DB inbound error: {db_in_e}")
+
+    #                         # Trigger calendar link
+    #                         bot_response = None
+    #                         trigger = False
+    #                         resp = None
+    #                         try:
+    #                             if getattr(admin_check, "goolgle_calendar", "") != "":
+    #                                 if any(word in msg_text.lower() for word in ['book', 'appointment']):
+    #                                     payload = {"msg_text": msg_text.lower(), 'admin_id': admin_check.id, 'user_id': existing_user.id}
+    #                                     send_request = requests.post(
+    #                                         "https://13e1f2a862ca.ngrok-free.app/send_trigger/",
+    #                                         data=payload,
+    #                                         timeout=10
+    #                                     )
+    #                                     send_request.raise_for_status()
+    #                                     resp = send_request.json()
+    #                                     bot_response = resp.get("url")
+    #                                     trigger = True
+    #                         except requests.RequestException as e:
+    #                             print(f"trigger error: {e}")
+
+    #                         # If no trigger, do LLM response
+    #                         if not trigger:
+    #                             bot_response = None
+    #                             openai_key = (getattr(admin_check, "openai_api_key", "") or "").strip()
+    #                             pine_token = (getattr(admin_check, "pinecone_token", "") or "").strip()
+
+    #                             if openai_key:
+    #                                 try:
+    #                                     openai.api_key = openai_key
+    #                                     if admin_check.chatgpt_mode == 'ai_agent':
+    #                                         ai_agent = AIAgentConfig.objects.filter(admin=admin_check, is_active=True).last()
+    #                                         pdf_content = ai_agent.pdf_text if ai_agent else ""
+    #                                         instructions = ai_agent.instruction if ai_agent else "Follow the owner's instructions and upload relevant FAQs."
+    #                                         system_prompt = f"{instructions}\n\nREFER TO THE FOLLOWING FAQ/INSTRUCTIONS:\n{pdf_content}"
+    #                                     else:
+    #                                         prompt_obj = ChatGPTPrompt.objects.filter(admin_id=admin_check.id).last()
+    #                                         system_prompt = prompt_obj.prompt_text if prompt_obj else "Default prompt."
+    #                                     # if not system_prompt:
+    #                                     #     system_prompt = (
+    #                                     #         "Follow the owner's configured instructions exactly. "
+    #                                     #         "If no instructions are configured, reply: 'Prompt not configured.'"
+    #                                     #     )
+    #                                     resp = openai.ChatCompletion.create(
+    #                                         model="gpt-3.5-turbo",
+    #                                         messages=[
+    #                                             {"role": "system", "content": system_prompt},
+    #                                             {"role": "user", "content": msg_text},
+    #                                         ],
+    #                                         timeout=15,
+    #                                     )
+    #                                 except Exception as oe:
+    #                                     print(f"[LLM] OpenAI error: {oe}")
+    #                                     resp = None
+
+    #                                 if resp and hasattr(resp, "choices") and len(resp.choices) > 0:
+    #                                     bot_response = resp.choices[0].message.content.strip()
+    #                                     print("[LLM] ChatGPT used")
+    #                                 else:
+    #                                     bot_response = "Sorry, I couldn’t generate a response just now."
+    #                             elif pine_token:
+    #                                 try:
+    #                                     pc = Pinecone(api_key=pine_token)
+    #                                     admin = Admin.objects.first()
+    #                                     assistant_name = admin.assistant_name  # fetch from your Admin model or relevant object
+    #                                     assistant = pc.assistant.Assistant(assistant_name=assistant_name)
+    #                                     pmsg = Pinemessage(content=msg_text)
+    #                                     presp = assistant.chat(messages=[pmsg])
+    #                                     bot_response = (presp or {}).get("message", {}).get("content")
+    #                                     print("[LLM] Pinecone used")
+    #                                 except Exception as pe:
+    #                                     print(f"[LLM] Pinecone error: {pe}")
+    #                                     bot_response = "Sorry, I couldn’t generate a response just now."
+    #                             else:
+    #                                 bot_response = "Sorry, my assistant is offline right now."
+
+    #                             if not bot_response:
+    #                                 bot_response = "Got it!"
+
+    #                         # Process JSON response from AI
+    #                             try:
+    #                                 data_json = None
+    #                                 final_reply_text = None
+
+    #                                 if bot_response:
+    #                                     try:
+    #                                         data_json = json.loads(bot_response)
+    #                                     except json.JSONDecodeError:
+    #                                         data_json = None
+
+    #                                     if data_json is not None:
+    #                                         messages = data_json.get("messages", [])
+    #                                         if messages and isinstance(messages, list):
+    #                                             final_reply_text = messages[0].get("text") or messages[0].get("message", {}).get("text", "")
+    #                                         else:
+    #                                             final_reply_text = bot_response
+    #                                     else:
+    #                                         final_reply_text = bot_response
+    #                                 else:
+    #                                     final_reply_text = "Sorry, I couldn't generate a response just now."
+
+    #                                 if final_reply_text and isinstance(final_reply_text, str):
+    #                                     final_reply_text = final_reply_text.replace("{username}", getattr(existing_user, "name", ""))
+    #                                 else:
+    #                                     final_reply_text = "Sorry, I couldn't understand your request."
+    #                                 # data_json = None
+    #                                 # if bot_response:
+    #                                 #     try:
+    #                                 #         data_json = json.loads(bot_response)
+    #                                 #     except json.JSONDecodeError:
+    #                                 #         data_json = None
+                                            
+    #                                 # print("AI response JSON:", data_json)
+    #                                 # print("User:", existing_user)
+                                
+    #                                 # messages = data_json.get("messages", [])
+    #                                 # if messages:
+    #                                 #     text = messages[0].get("text") or messages[0].get("message", {}).get("text", "")
+    #                                 #     if text and isinstance(text, str):
+    #                                 #         text = text.replace("{username}", existing_user.name) if hasattr(existing_user, "name") else text
+    #                                 #     else:
+    #                                 #         text = "Sorry, I couldn't understand your request."
+    #                                 # else:
+    #                                 #     text = "Sorry, I couldn't understand your request."
+    #                                 # final_reply_text = None
+    #                                 # if bot_response:
+    #                                 #     try:
+    #                                 #         data_json = json.loads(bot_response)
+    #                                 #         messages = data_json.get("messages", [])
+    #                                 #         if messages and isinstance(messages, list):
+    #                                 #             final_reply_text = messages[0].get("text") or messages[0].get("message", {}).get("text", "")
+    #                                 #         else:
+    #                                 #             final_reply_text = bot_response
+    #                                 #     except Exception:
+    #                                 #         final_reply_text = bot_response
+    #                                 # else:
+    #                                 #     final_reply_text = "Sorry, I couldn't generate a response just now."
+
+    #                                 # if final_reply_text and isinstance(final_reply_text, str):
+    #                                 #     final_reply_text = final_reply_text.replace("{username}", getattr(existing_user, "name", ""))
+    #                                 # else:
+    #                                 #     final_reply_text = "Sorry, I couldn't understand your request."
+
+                                    
+    #                                 tag_keywords = ["active", "priority", "escalation"]
+    #                                 actions = data_json.get("actions", [])
+
+    #                                 for action in actions:
+    #                                     if action.get("action") == "add_tag":
+    #                                         tag_name = action.get("tag_name").lower()
+    #                                         if tag_name in tag_keywords:
+    #                                             tag, _ = Tag.objects.get_or_create(name=tag_name)
+    #                                             if not UserTag.objects.filter(user=existing_user, tag=tag).exists():
+    #                                                 UserTag.objects.create(user=existing_user, tag=tag)
+    #                                                 print(f"User {existing_user.id} tagged with {tag_name}.")
+    #                                 try:
+    #                                     r = requests.post(
+    #                                         "https://13e1f2a862ca.ngrok-free.app/send_whatsapp_message/",
+    #                                         data={
+    #                                             "phone": existing_user.phone_no,
+    #                                             "message": final_reply_text,
+    #                                             "phone_number_id": phone_number_id
+    #                                         },
+    #                                         timeout=15
+    #                                     )
+    #                                     if r.status_code != 200:
+    #                                         print(f"send_whatsapp_message error: {r.status_code} - {r.text}")
+    #                                 except Exception as e:
+    #                                     print(f"Exception calling send_whatsapp_message: {e}")
+
+    #                                 Message.objects.create(
+    #                                     # user=existing_user,
+    #                                     user_id=existing_user,
+    #                                     messages=final_reply_text,
+    #                                     created_at=datetime.now(),
+    #                                     who="bot"
+    #                                 )
+    #                             # else:
+    #                                 # try:
+    #                                 #             r = requests.post(
+    #                                 #                 "https://64300f6114b3.ngrok-free.app/send_whatsapp_message/",
+    #                                 #                 data={
+    #                                 #                     "phone": existing_user.phone_no,
+    #                                 #                     "message": bot_response,
+    #                                 #                     "phone_number_id": phone_number_id
+    #                                 #                 },
+    #                                 #                 timeout=15
+    #                                 #             )
+    #                                 #             if r.status_code != 200:
+    #                                 #                 print(f"send_whatsapp_message error: {r.status_code} - {r.text}")
+    #                                 # except Exception as e:
+    #                                 #             print(f"Exception calling send_whatsapp_message: {e}")
+
+    #                                 # Message.objects.create(
+    #                                 #             # user=existing_user,
+    #                                 #             user_id=existing_user,
+    #                                 #             messages=bot_response,
+    #                                 #             created_at=datetime.now(),
+    #                                 #             who="bot"
+    #                                 #         )
+    #                                 #  # Schedule follow-up if template exists
+    #                                 # if existing_user and followup_template:
+    #                                 #     followup_text = followup_template.replace("{username}", existing_user.name)
+    #                                 #     send_followup_message.apply_async(args=[existing_user.id, followup_text], countdown=30)
+                                     
+    #                             except Exception as e:
+    #                                 print(f"Error processing bot response: {e}")
+
+    #             return HttpResponse("Message stored", status=200)
+
+    #         except Exception as e:
+    #             print(f"Webhook Error: {str(e)}")
+    #             return HttpResponse("OK", status=200)
+
+    #     return HttpResponse("Method not allowed", status=405)
+
     @csrf_exempt
     def send_trigger(request):
         admin_id=request.POST.get('admin_id') or ''
@@ -397,3 +745,16 @@ class whatsappcontroller:
         return redirect('/setting/channels')
         
 
+
+    def extract_followup_message(prompt_text):
+        marker = "Follow-up message template:"
+        idx = prompt_text.find(marker)
+        if idx == -1:
+            return "Hi {username}, just checking if you need any further assistance. We are here to help!"
+        followup_part = prompt_text[idx + len(marker):].strip()
+        lines = followup_part.splitlines()
+        for line in lines:
+            line = line.strip()
+            if line:
+                return line
+        return "Hi {username}, just checking if you need any further assistance. We are here to help!"

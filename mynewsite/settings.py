@@ -24,12 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-gf7l^42ba)oc=rvv87_ocx@tq4o$c)2&$eg5&ake*5yzx)jf@j'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
      'localhost',
     '127.0.0.1',
-    '1d947b3a8e32.ngrok-free.app',  # ← Add this
+    '1d947b3a8e32.ngrok-free.app',  # ← Add this    
     '.ngrok-free.app',
     "https://07377353818c.ngrok-free.app"
 ]
@@ -89,8 +89,12 @@ DATABASES = {
         'PASSWORD':'',
         'HOST':'localhost',
         'PORT':'3306',
-        'OPTIONS':{
-            'init_command':"SET sql_mode='STRICT_TRANS_TABLES'"
+        # 'OPTIONS':{
+        #     'init_command':"SET sql_mode='STRICT_TRANS_TABLES'"
+        # }
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'init_command': "SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'; SET sql_mode='STRICT_TRANS_TABLES'"
         }
     }
 }
@@ -152,3 +156,13 @@ CSRF_TRUSTED_ORIGINS = [
 # ]
 
 # LOGIN_URL = "/login_view/"
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
+MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+
+

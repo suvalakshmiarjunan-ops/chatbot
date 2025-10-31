@@ -33,6 +33,8 @@ class Settingcontroller :
     def integration(request):
         pinecone_connected = None
         chatgpt_connected = False  # default to False
+        admin = None 
+        chatgpt_mode = "N/A"
         admin_id = request.session.get('admin_id')
 
         if admin_id:
@@ -46,9 +48,12 @@ class Settingcontroller :
                 openai_key = admin.openai_api_key
                 if openai_key and openai_key != '':
                     chatgpt_connected = True
+                chatgpt_mode = admin.chatgpt_mode    
 
         return render(request, 'set/integration.html', {
             'pinecone_connected': pinecone_connected,
             'chatgpt_connected': chatgpt_connected,
+            'admin': admin,
+            'chatgpt_mode': chatgpt_mode,
         })
         

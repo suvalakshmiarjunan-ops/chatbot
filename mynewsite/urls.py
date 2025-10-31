@@ -9,6 +9,13 @@ from newapp.controllers.contact import Contactcontroller
 from newapp.controllers.settings import Settingcontroller
 from newapp.controllers.whatsapp import whatsappcontroller
 from newapp.controllers.integration import Integrationcontroller
+from newapp.views import whatsapp_templates
+from newapp.controllers.integration import Integrationcontroller
+integration_controller = Integrationcontroller()
+from django.conf import settings
+from django.conf.urls.static import static
+from newapp.views import delete_pdf
+
 
 
 urlpatterns = [
@@ -28,6 +35,7 @@ urlpatterns = [
     path('contact/add',Contactcontroller.add_user,name='add_user'),
     path('contact/add_admin_user',Contactcontroller.add_admin_user,name='add_admin_user'),
     path('contact/tag/', views.tag_view, name='add_tag'),
+    path('contact/tags/delete/<int:tag_id>/', views.delete_tag, name='delete_tag'),
     path('api/users/', views.user_search_api, name='user_search_api'),
     path('contact/edit/<int:id>/', Contactcontroller.edit_user, name='edit_user'),
     path('contact/delete/<int:id>/', Contactcontroller.delete_user, name='delete_user'),
@@ -72,15 +80,25 @@ urlpatterns = [
     path('chatbox/', views.show_chatbox, name='chatbox'),
     path('broadcast_msg/',views.broadcast_msg,name='broadcast_msg'),
     path('send_broadcast/', views.send_broadcast, name='send_broadcast'),
+    path('import_contacts/', views.import_contacts, name='import_contacts'),
+    path('api/whatsapp_templates/', whatsapp_templates, name='whatsapp_templates'),
+    
 
 
     #chatgpt
     path('connect_openai_key/', views.connect_openai_key, name='connect_openai_key'),
     path('disconnect_openai_key/', views.disconnect_openai_key, name='disconnect_openai_key'),
+    path('set_chatgpt_mode/', Integrationcontroller.set_chatgpt_mode, name='set_chatgpt_mode'),
     path('chatgpt_prompt/', views.chatgpt_prompt_page, name='chatgpt_prompt_page'),
+    path('ai_agent/upload/', integration_controller.ai_agent_upload, name='ai_agent_upload'),
+    path('ai_agent/delete/<int:pk>/', delete_pdf, name='delete_pdf'),
     path('whatsapp/chatgpt_webhook/', views.get_message_chatgpt, name='chatgpt_webhook'),
  
 
 
     # path('new/',views.new,name='new')  # ✅ This line is correct
+    
 ]
+
+if settings.DEBUG:  # Add this block at the bottom of the file
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

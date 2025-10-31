@@ -8,6 +8,9 @@ import requests
 from .models import User
 from datetime import datetime
 # from .models import Message
+from django.db.models import Max
+from django.shortcuts import render
+from .models import User, Message
 from pinecone_plugins.assistant.models.chat import Message as Pinemessage
 
 from django.http import JsonResponse
@@ -18,6 +21,11 @@ from .models import Message
 from .models import Admin
 from .forms import TaggingForm  
 from .models import User, Tag, UserTag
+from newapp.models import Tag
+
+
+
+
 
 
 
@@ -82,7 +90,7 @@ def send_whatsapp_message(request):
                     new_user = User.objects.create(
                         name='bot',
                         phone_no=phone,
-                        created_at=datetime.now()
+                        created_at=timezone.now()
                     )
                     user_id = new_user.id
                     print(f"id:{user_id}")
@@ -94,7 +102,7 @@ def send_whatsapp_message(request):
                     new_message = Message.objects.create(
                         user_id=user_instance,
                         messages=message,
-                        created_at=datetime.now(),
+                        created_at=timezone.now(),
                         who='bot'
                     )
                     print(f"successfully")
@@ -367,53 +375,111 @@ def show_chatbox(request):
 #             return HttpResponse(f"Error: {str(e)}", status=400)
 
 
+# def broadcast_msg(request):
+#     return render(request, 'broadcast_form.html')
 def broadcast_msg(request):
-    return render(request, 'broadcast_form.html')
+    tags = Tag.objects.all()
+    return render(request, 'broadcast_form.html', {'tags': tags})
 
 
-WHATSAPP_API_URL = "https://graph.facebook.com/v22.0/1356495696480176/messages"
+WHATSAPP_API_URL = "https://graph.facebook.com/v22.0/771795822685853/messages"
 ACCESS_TOKEN = "EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD"  # your WhatsApp Cloud API token
 
 
 # views.py
 # views.py
 
-WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/1356495696480176/messages"
+WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/771795822685853/messages"
 ACCESS_TOKEN ='EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD'
 
 
+# def send_broadcast(request):
+#     if request.method != "POST":
+#         return HttpResponse("Invalid request method", status=405)
+
+#     msg = (request.POST.get('message') or '').strip()
+#     if not msg:
+#         return HttpResponse("Message is required", status=400)
+
+#     # Get all phones you intend to send to
+#     phones = list(User.objects.values_list('phone_no', flat=True))
+#     users = User.objects.filter(phone_no__in=phones).values('id', 'phone_no')
+#     headers = {
+#         "Authorization": f"Bearer {ACCESS_TOKEN}",
+#         "Content-Type": "application/json"
+#     }
+#     for user in users:
+#         user_instance = User.objects.get(id=user['id'])
+#         payload = {
+#         "messaging_product": "whatsapp",
+#         "to":user['phone_no'],
+#         "type": "template",
+#         "template": {
+#         "name": "hello_world",
+#         "language": {"code": "en_US"}
+#         }}
+#         r = requests.post(WHATSAPP_API_URL, headers=headers, json=payload)
+#         Message.objects.create(
+#             user_id=user_instance,
+#             messages="hello world",
+#             who="bot"
+#         )
+#     return HttpResponse(200)
+WHATSAPP_API_URL ="https://graph.facebook.com/v22.0/771795822685853/messages"
+ACCESS_TOKEN ='EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD'
+@csrf_exempt
 def send_broadcast(request):
     if request.method != "POST":
         return HttpResponse("Invalid request method", status=405)
 
-    msg = (request.POST.get('message') or '').strip()
-    if not msg:
-        return HttpResponse("Message is required", status=400)
+    message_body = (request.POST.get('message') or '').strip()
+    selected_tag_name = request.POST.get('selected_tag_name')
+    template_name = request.POST.get('template')
 
-    # Get all phones you intend to send to
-    phones = list(User.objects.values_list('phone_no', flat=True))
-    users = User.objects.filter(phone_no__in=phones).values('id', 'phone_no')
+    if not message_body:
+        return HttpResponse("Message is required", status=400)
+    if not selected_tag_name:
+        return HttpResponse("Tag selection is required", status=400)
+    if not template_name:
+        return HttpResponse("Template selection is required", status=400)
+
+    try:
+        tag = Tag.objects.get(name=selected_tag_name)
+    except Tag.DoesNotExist:
+        return HttpResponse(f"Tag '{selected_tag_name}' not found.", status=400)
+
+    # Get all users linked to the selected tag
+    user_ids = UserTag.objects.filter(tag=tag).values_list('user_id', flat=True)
+    users = User.objects.filter(id__in=user_ids)
+
     headers = {
         "Authorization": f"Bearer {ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
+
     for user in users:
-        user_instance = User.objects.get(id=user['id'])
         payload = {
-        "messaging_product": "whatsapp",
-        "to":user['phone_no'],
-        "type": "template",
-        "template": {
-        "name": "hello_world",
-        "language": {"code": "en_US"}
-        }}
+            "messaging_product": "whatsapp",
+            "to": user.phone_no,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": "en_US"}
+            }
+        }
         r = requests.post(WHATSAPP_API_URL, headers=headers, json=payload)
+        print(f"Sent to {user.phone_no}, Status: {r.status_code}, Response: {r.text}")
+        
+        # Log each message sent in your DB
         Message.objects.create(
-            user_id=user_instance,
-            messages="hello world",
+            user_id=user,
+            messages=message_body,
             who="bot"
         )
-    return HttpResponse(200)
+
+    # return HttpResponse("Broadcast sent successfully.")
+    return redirect('broadcast_msg')
+
          
    
    
@@ -503,6 +569,7 @@ def dashboard_view(request):
 
 def inbox_view(request):
     return render(request, 'inbox.html')
+
 
 def flows_view(request):
     return render(request, 'flows.html')
@@ -737,7 +804,7 @@ def chatgpt_prompt_page(request):
             prompt_obj.save()
         else:
             ChatGPTPrompt.objects.create(prompt_text=new_prompt)
-        return redirect('chatgpt_prompt_page')
+        return redirect('integration_view')
 
     return render(request, 'chatgpt_prompt.html', {"prompt": current_prompt})
 
@@ -767,12 +834,12 @@ def get_message_chatgpt(request):
         # Save incoming message
         user_obj, _ = User.objects.get_or_create(
             phone_no=phone,
-            defaults={'name': 'user', 'created_at': datetime.now()}
+            defaults={'name': 'user', 'created_at': timezone.now()}
         )
         Message.objects.create(
             user_id=user_obj,
             messages=user_text,
-            created_at=datetime.now(),
+            created_at=timezone.now(),
             who='human'
         )
 
@@ -793,7 +860,7 @@ def get_message_chatgpt(request):
         Message.objects.create(
             user_id=user_obj,
             messages=reply,
-            created_at=datetime.now(),
+            created_at=timezone.now(),
             who='bot'
         )
 
@@ -854,3 +921,163 @@ def disconnect_openai_key(request):
         admin.save(update_fields=['openai_api_key'])
         return JsonResponse({"msg": "ChatGPT API key disconnected."})
     return JsonResponse({"msg": "Invalid request."}, status=405)
+
+# import logging
+# import requests
+
+# logger = logging.getLogger(__name__)
+
+# def send_whatsapp_reply(message_text, to_phone, phone_id, token):
+#     url = f"https://graph.facebook.com/v17.0/{phone_id}"
+#     headers = {
+#         "Authorization": f"Bearer {token}",
+#         "Content-Type": "application/json"
+#     }
+#     payload = {
+#         "messaging_product": "whatsapp",
+#         "to": to_phone,
+#         "type": "text",
+#         "text": {"body": message_text}
+#     }
+#     try:
+#         response = requests.post(url + '/messages', json=payload, headers=headers)
+#         if response.status_code != 200:
+#             logger.warning(f"Failed to send WhatsApp message: {response.text}")
+#     except Exception as e:
+#         logger.error(f"Exception during sending WhatsApp message: {e}")
+
+import logging
+import requests
+from django.utils import timezone
+from newapp.models import User, Message
+
+logger = logging.getLogger(__name__)
+
+def send_whatsapp_reply(message_text, to_phone, phone_id, token):
+    url = f"https://graph.facebook.com/v17.0/{phone_id}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_phone,
+        "type": "text",
+        "text": {"body": message_text}
+    }
+    try:
+        response = requests.post(url + '/messages', json=payload, headers=headers)
+        if response.status_code != 200:
+            logger.warning(f"Failed to send WhatsApp message: {response.text}")
+        else:
+            # Save bot reply in DB
+            user, created = User.objects.get_or_create(phone_no=to_phone, defaults={'name': 'bot', 'created_at': timezone.now()})
+            Message.objects.create(user=user, messages=message_text, created_at=timezone.now(), who='bot')
+    except Exception as e:
+        logger.error(f"Exception during sending WhatsApp message: {e}")
+
+
+import csv
+from django.shortcuts import redirect
+from django.contrib import messages
+from .models import User, Tag, UserTag
+import traceback
+@csrf_exempt
+def import_contacts(request):
+    try:
+        if request.method == 'POST':
+            tag_name = request.POST.get('tag_name', '').strip()
+            csv_file = request.FILES.get('csv_file')
+
+            # Get admin_id from session
+            admin_id_value = request.session.get('admin_id')
+            if not admin_id_value:
+                messages.error(request, "You must be logged in.")
+                return redirect('login')  # or your login page
+            
+            # Fetch the Admin instance
+            try:
+                admin_instance = Admin.objects.get(id=admin_id_value)
+            except Admin.DoesNotExist:
+                messages.error(request, "Invalid admin.")
+                return redirect('login')
+
+            if not tag_name or not csv_file:
+                messages.error(request, "Tag name and CSV file are required.")
+                return redirect('contact_dashboard')
+
+            tag, created = Tag.objects.get_or_create(name=tag_name)
+
+            decoded_file = csv_file.read().decode('utf-8-sig').splitlines()
+            reader = csv.DictReader(decoded_file)
+
+            for row in reader:
+                print("Raw row dict:", row)
+                name = (row.get('name') or '').strip()
+                phone = row.get('phone', '').strip()
+                print(f"Processing name={name} phone={phone}")
+                if not phone:
+                    continue
+                if not name:
+                    name = 'Unknown'  # or any default name
+
+                # Create or get User with admin instance properly assigned
+                user, created = User.objects.get_or_create(phone_no=phone, defaults={'name': name, 'admin_id': admin_instance})
+
+                # If user exists but admin_id not set or different, update it
+                if not created and user.admin_id != admin_instance:
+                    user.admin_id = admin_instance
+                    user.save()
+
+                UserTag.objects.get_or_create(user=user, tag=tag)
+
+            messages.success(request, f"Contacts imported under tag '{tag_name}'.")
+            return redirect('contact_dashboard')
+
+        return redirect('contact_dashboard')
+
+    except Exception as e:
+            print('IMPORT ERROR:', e)
+            print(traceback.format_exc())
+            return HttpResponse("Import Error: {}".format(e), status=500)
+
+
+from django.http import JsonResponse
+import requests
+
+def whatsapp_templates(request):
+    waba_id = "1356495696480176"
+    access_token = "EAAb5iwsH0RUBPSENEf1CW3OgMo8bjfQRuG3PT1smRsNEYJWimKVjw0l9zfKLo8009E79YDi5xeNhPuTvNlwc2hZCPXHBKXjUI6ClVvQgFnQJEYPZBwBEJdJh3hr5Hg9W7xm2nMfcVrZBVr68g9Qx1C2Fpd4kUPuN5uER7jMleexmpy0w6B1m5bq4IlYEBMEAgZDZD"  
+
+    url = f"https://graph.facebook.com/v22.0/{waba_id}/message_templates"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        templates = response.json().get("data", [])
+        template_names = [t["name"] for t in templates]
+        return JsonResponse({"templates": template_names})
+    else:
+        return JsonResponse({"error": "Failed to fetch templates", "details": response.text}, status=500)
+    
+from django.shortcuts import redirect, get_object_or_404
+from newapp.models import Tag
+
+def delete_tag(request, tag_id):
+    if request.method == "POST":
+        tag = get_object_or_404(Tag, id=tag_id)
+        tag.delete()
+    return redirect('add_tag')
+
+from django.shortcuts import get_object_or_404, redirect
+from .models import AIAgentConfig
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def delete_pdf(request, pk):
+    if request.method == "POST":
+        pdf = get_object_or_404(AIAgentConfig, pk=pk)
+        pdf.pdf_file.delete()  # Removes the file from storage
+        pdf.delete()           # Removes the DB entry
+    return redirect('ai_agent_upload')  # Update with your upload view name

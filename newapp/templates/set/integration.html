@@ -16,7 +16,7 @@
   <style>
     :root { --sidebar-w: 250px; }
     html, body { height: 100%; }
-    body { margin: 0; background:#f7f8fb; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#0f172a; }
+    body { margin: 0; background:#E8DFCA; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#0f172a; }
 
     .sidebar{
       position: fixed;
@@ -41,8 +41,8 @@
 
     .channel-card{
       border-radius: 1rem;
-      border: 1px solid #e5e7eb;
-      background: #fff;
+      border: 1px solid #D9C4B0;
+      background: #FBF3D5;
       padding: 1rem 1.25rem;
       display: flex;
       align-items: center;
@@ -103,6 +103,15 @@
                 </svg>
               </div>
               <div class="fw-semibold">ChatGPT</div>
+              <span class="badge rounded-pill bg-secondary ms-2">
+                {% if chatgpt_mode == "prompt" %}
+                  Prompt Mode
+                {% elif chatgpt_mode == "ai_agent" %}
+                  AI Agent Mode
+                {% else %}
+                  Not Set
+                {% endif %}
+              </span>
             </div>
             <span class="text-muted">&rsaquo;</span>
             {% if chatgpt_connected %}
@@ -132,6 +141,11 @@
               <label for="pineconeKey" class="form-label">Pinecone API Key</label>
               <input type="text" id="pineconeKey" class="form-control" placeholder="Enter Pinecone API Key" />
               <div class="form-text">We’ll store this securely to enable Pinecone features.</div>
+            </div>
+            <div class="mb-3">
+              <label for="assistantName" class="form-label">Assistant Name</label>
+              <input type="text" id="assistantName" class="form-control" placeholder="Enter Assistant Name" value="{{ admin.assistant_name|default:'' }}">
+              <div class="form-text">Set the assistant name used for Pinecone connections.</div>
             </div>
           {% endif %}
           <div id="pineconeAlert" class="alert d-none" role="alert"></div>
@@ -172,6 +186,7 @@
           {% if chatgpt_connected %}
             <button type="button" class="btn btn-danger" id="confirmChatGPTDisconnect">Disconnect</button>
             <button type="button" class="btn btn-primary" id="goToPromptPage">Enter Prompt</button>
+            <button type="button" class="btn btn-secondary" id="goToAIpage">AI Agent</button>
           {% else %}
             <button type="button" class="btn btn-success" id="confirmChatGPTConnect">Connect</button>
           {% endif %}
@@ -249,16 +264,18 @@
       confirmConnectBtn.addEventListener('click', async () => {
         clearAlert();
         const keyInput = document.getElementById('pineconeKey');
+        const assistantInput = document.getElementById('assistantName');
         const apiKey = keyInput?.value?.trim();
-        if (!apiKey) {
-          showAlert('Please enter an API key.', 'warning');
+        const assistantName = assistantInput?.value.trim();
+        if (!apiKey || !assistantName) {
+           showAlert('Please enter both API key and assistant name.', 'warning');
           return;
-        }
+          }
         try {
           const origin = window.location.origin + '/connect_pinecone_token/';
           const res = await fetch(origin, {
             method: 'POST',
-            body: JSON.stringify({ api_key: apiKey }),
+            body: JSON.stringify({ api_key: apiKey, assistant_name: assistantName }),
             headers: {
               'Content-Type': 'application/json',
               'X-CSRFToken': CSRF_TOKEN
@@ -343,9 +360,11 @@
 
     const goToPromptPageBtn = document.getElementById('goToPromptPage');
     if (goToPromptPageBtn) {
-      goToPromptPageBtn.addEventListener('click', () => {
-        window.location.href = '/chatgpt_prompt/';
-      });
+    goToPromptPageBtn.addEventListener('click', async (e) => {
+    e.preventDefault(); // Prevent default button action
+    await updateChatGPTMode('prompt'); // Send mode change to backend
+    window.location.href = '/chatgpt_prompt/'; // Then redirect
+    });
     }
 
     function showAlert(message, type = 'info', alertId = 'chatgptAlert') {
@@ -360,6 +379,52 @@
       alertEl.classList.add('d-none');
       alertEl.textContent = '';
     }
+    const goToAIpageBtn = document.getElementById('goToAIpage');
+    if (goToAIpageBtn) {
+    goToAIpageBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await updateChatGPTMode('ai_agent');
+    window.location.href = '/ai_agent/upload/';
+    });
+
+
+}
+async function updateChatGPTMode(mode) {
+  const csrfToken = CSRF_TOKEN;  // CSRF token variable you already have
+  const adminId = '{{ admin.id }}';  // Make sure admin.id is passed into the template context
+
+  const response = await fetch('/set_chatgpt_mode/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': csrfToken,
+    },
+    body: new URLSearchParams({
+      'admin_id': adminId,
+      'mode': mode,
+    }),
+  });
+
+  const data = await response.json();
+  if (data.success) {
+    alert('Bot mode changed to: ' + data.mode);
+  } else {
+    alert('Failed to change mode: ' + (data.error || 'Unknown error'));
+  }
+}
+
+document.getElementById('goToPromptPage').addEventListener('click', async () => {
+  await updateChatGPTMode('prompt');
+  window.location.href = '/chatgpt_prompt/';
+});
+
+document.getElementById('goToAIpage').addEventListener('click', async () => {
+  await updateChatGPTMode('ai_agent');
+  window.location.href = '/ai_agent/upload/';
+});
+
+    
+  
   </script>
 </body>
 </html>
